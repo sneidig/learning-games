@@ -1,0 +1,84 @@
+{
+  "id": "meanings",
+  "title": "What Each Modifier Means",
+  "blurb": "Start with the individual keywords, then the two combined ones. Match each access modifier to exactly who can reach the member.",
+  "docs": [
+    { "label": "Microsoft Learn — Access Modifiers (C#)", "url": "https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/access-modifiers" }
+  ],
+  "levels": [
+    {
+      "id": "meanings-l1",
+      "zone": "meanings",
+      "tier": "free",
+      "primitive": "matching",
+      "title": "L1 · The four individual ones",
+      "prompt": "Match each single keyword to what it allows.",
+      "payload": {
+        "leftTitle": "Modifier",
+        "rightTitle": "Who can access it",
+        "left": [
+          { "id": "public", "label": "public" },
+          { "id": "private", "label": "private" },
+          { "id": "protected", "label": "protected" },
+          { "id": "internal", "label": "internal" }
+        ],
+        "right": [
+          { "id": "any", "label": "any code, any assembly" },
+          { "id": "self", "label": "only the containing type" },
+          { "id": "derived", "label": "the type + derived types (any assembly)" },
+          { "id": "asm", "label": "any code in the same assembly" }
+        ]
+      },
+      "solution": { "pairs": { "public": "any", "private": "self", "protected": "derived", "internal": "asm" } },
+      "failStates": [
+        {
+          "when": { "leftId": "protected", "rightId": "asm" },
+          "title": "protected is about inheritance, not the assembly",
+          "explain": "protected opens the member to derived classes (in any assembly), NOT to every class in the same assembly. 'Same assembly' is what internal means."
+        },
+        {
+          "when": { "leftId": "internal", "rightId": "derived" },
+          "title": "internal is about the assembly, not inheritance",
+          "explain": "internal means 'anyone in this assembly.' A derived class in another assembly can't see it. Inheritance-based access is protected."
+        }
+      ]
+    },
+    {
+      "id": "meanings-l2",
+      "zone": "meanings",
+      "tier": "free",
+      "primitive": "matching",
+      "title": "L2 · The two combined ones",
+      "prompt": "The compound modifiers are the confusing part. One is OR, one is AND — match them up.",
+      "payload": {
+        "leftTitle": "Modifier",
+        "rightTitle": "Who can access it",
+        "left": [
+          { "id": "protint", "label": "protected internal", "note": "protected OR internal" },
+          { "id": "privprot", "label": "private protected", "note": "protected AND internal" },
+          { "id": "internal", "label": "internal", "note": "for contrast" },
+          { "id": "protected", "label": "protected", "note": "for contrast" }
+        ],
+        "right": [
+          { "id": "or", "label": "same assembly OR a derived class anywhere" },
+          { "id": "and", "label": "a derived class, but only in the same assembly" },
+          { "id": "asm", "label": "any code in the same assembly" },
+          { "id": "derived", "label": "the type + derived types (any assembly)" }
+        ]
+      },
+      "solution": { "pairs": { "protint": "or", "privprot": "and", "internal": "asm", "protected": "derived" } },
+      "failStates": [
+        {
+          "when": { "leftId": "protint", "rightId": "and" },
+          "title": "protected internal is the OR (the widest)",
+          "explain": "protected internal = protected OR internal — the most permissive: any class in the assembly, plus derived classes anywhere. The AND (narrowest) one is private protected."
+        },
+        {
+          "when": { "leftId": "privprot", "rightId": "or" },
+          "title": "private protected is the AND (the narrowest)",
+          "explain": "private protected = protected AND internal — you must be BOTH a derived class AND in the same assembly. That's the most restrictive combination."
+        }
+      ]
+    }
+  ]
+}

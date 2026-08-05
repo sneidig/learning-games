@@ -1,0 +1,126 @@
+{
+  "id": "ladder",
+  "title": "The Growth Ladder",
+  "blurb": "Before you can name a complexity, you need the pecking order. Put these from fastest-growing-slowest (best) at the top to fastest-growing (worst) at the bottom. Hover the ⓘ for what each one means.",
+  "docs": [
+    {
+      "label": "Big-O Cheat Sheet — the growth chart",
+      "url": "https://www.bigocheatsheet.com/"
+    }
+  ],
+  "glossary": {
+    "O(1)": "Constant — the work doesn't grow with the input at all. An array index, a dictionary lookup, a fixed formula.",
+    "O(log n)": "Logarithmic — each step throws away a fraction (usually half) of what's left. Binary search. Barely grows.",
+    "O(n)": "Linear — the work grows in step with the input. One pass over the list.",
+    "O(n log n)": "Linearithmic — a linear amount of work done log n times. Efficient sorting (merge/quick sort).",
+    "O(n²)": "Quadratic — work grows with the square of the input. Nested loops over the same data.",
+    "O(2ⁿ)": "Exponential — the work doubles with each element added. Brute-forcing every subset; naive recursion. Avoid."
+  },
+  "levels": [
+    {
+      "id": "ladder-l1",
+      "zone": "ladder",
+      "tier": "free",
+      "primitive": "ordering",
+      "title": "L1 · The core four",
+      "prompt": "Slowest-growing (most efficient) at the top, fastest-growing at the bottom.",
+      "hint": "Ask what each does per element as n grows: fixed work, halving, one-per-element, or one-per-pair.",
+      "payload": {
+        "tiles": [
+          "O(n²)",
+          "O(1)",
+          "O(n)",
+          "O(log n)"
+        ]
+      },
+      "solution": {
+        "order": [
+          "O(1)",
+          "O(log n)",
+          "O(n)",
+          "O(n²)"
+        ]
+      },
+      "explain": "Most efficient to least: O(1) does fixed work, O(log n) barely grows (it halves each step), O(n) grows in step with the input, and O(n²) grows with its square. That’s the order their curves cross as n gets large.",
+      "failStates": [
+        {
+          "rule": {
+            "type": "before",
+            "a": "O(n)",
+            "b": "O(log n)"
+          },
+          "title": "log n grows slower than n",
+          "explain": "O(log n) barely grows — doubling the input adds just one step. It's more efficient than O(n), so it sits above it."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "O(n²)",
+            "b": "O(n)"
+          },
+          "title": "Quadratic is worse than linear",
+          "explain": "For large n, n² dwarfs n (a million items → a trillion operations). O(n²) is the least efficient here, so it goes at the bottom."
+        }
+      ]
+    },
+    {
+      "id": "ladder-l2",
+      "zone": "ladder",
+      "tier": "free",
+      "primitive": "ordering",
+      "title": "L2 · The full ladder",
+      "prompt": "Add the linearithmic and exponential rungs. Best (top) to worst (bottom).",
+      "hint": "Rank by how fast the curve climbs. Two have a log factor; one explodes past every polynomial.",
+      "payload": {
+        "tiles": [
+          "O(n log n)",
+          "O(2ⁿ)",
+          "O(1)",
+          "O(n²)",
+          "O(log n)",
+          "O(n)"
+        ]
+      },
+      "solution": {
+        "order": [
+          "O(1)",
+          "O(log n)",
+          "O(n)",
+          "O(n log n)",
+          "O(n²)",
+          "O(2ⁿ)"
+        ]
+      },
+      "explain": "The full order, best to worst: O(1) < O(log n) < O(n) < O(n log n) < O(n²) < O(2ⁿ). Each grows strictly faster than the one before, and O(2ⁿ) eventually dwarfs every polynomial.",
+      "failStates": [
+        {
+          "rule": {
+            "type": "before",
+            "a": "O(n²)",
+            "b": "O(n log n)"
+          },
+          "title": "n log n beats n²",
+          "explain": "n log n is only a little worse than linear (the extra log n factor). n² is far worse — it belongs below n log n. This gap is exactly why an O(n log n) sort beats an O(n²) one."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "O(2ⁿ)",
+            "b": "O(n²)"
+          },
+          "title": "Exponential is the worst",
+          "explain": "2ⁿ explodes — 30 items is already a billion operations. It grows faster than any polynomial, so O(2ⁿ) goes dead last."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "O(n log n)",
+            "b": "O(n)"
+          },
+          "title": "Plain n is faster than n log n",
+          "explain": "O(n) has no log factor, so it's more efficient than O(n log n) — linear sits above linearithmic."
+        }
+      ]
+    }
+  ]
+}

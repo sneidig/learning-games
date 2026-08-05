@@ -1,0 +1,140 @@
+{
+  "id": "access",
+  "title": "Can This Code See That Member?",
+  "blurb": "The real test: given where the calling code lives — same class, a derived class, an unrelated class, same or different assembly — does the access compile, or is it a CS0122 error? Read each pair and predict.",
+  "docs": [
+    { "label": "Microsoft Learn — Access Modifiers (accessibility table)", "url": "https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/access-modifiers" }
+  ],
+  "levels": [
+    {
+      "id": "access-l1",
+      "zone": "access",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L1 · private, from another class",
+      "prompt": "Both classes are in the same assembly. Does this compile?",
+      "payload": {
+        "blocks": [
+          { "label": "The member", "code": "public class Account\n{\n    private decimal _balance;\n}" },
+          { "label": "The caller — a different, unrelated class", "code": "class Report\n{\n    void Show(Account a) => Log(a._balance);\n}" }
+        ],
+        "options": [
+          { "id": "ok", "label": "✅ Compiles — accessible" },
+          { "id": "err", "label": "❌ Compiler error — inaccessible" }
+        ]
+      },
+      "solution": { "optionId": "err" },
+      "failStates": [
+        {
+          "when": { "optionId": "ok" },
+          "title": "private means only inside Account",
+          "explain": "private limits access to the containing type itself. Report is a separate class, so `a._balance` is a CS0122 'inaccessible due to its protection level' error — even in the same assembly."
+        }
+      ]
+    },
+    {
+      "id": "access-l2",
+      "zone": "access",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L2 · protected, across assemblies",
+      "prompt": "Square is in a DIFFERENT assembly than Shape, and derives from it. Does this compile?",
+      "payload": {
+        "blocks": [
+          { "label": "Assembly 1", "code": "public class Shape\n{\n    protected int Sides;\n}" },
+          { "label": "Assembly 2 (references Assembly 1)", "code": "class Square : Shape\n{\n    void Set() => Sides = 4;\n}" }
+        ],
+        "options": [
+          { "id": "ok", "label": "✅ Compiles — accessible" },
+          { "id": "err", "label": "❌ Compiler error — inaccessible" }
+        ]
+      },
+      "solution": { "optionId": "ok" },
+      "failStates": [
+        {
+          "when": { "optionId": "err" },
+          "title": "protected crosses assembly boundaries",
+          "explain": "protected grants access to derived classes in ANY assembly. Square derives from Shape and uses Sides through its own inheritance, so it compiles. The assembly boundary only matters for internal."
+        }
+      ]
+    },
+    {
+      "id": "access-l3",
+      "zone": "access",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L3 · internal, across assemblies",
+      "prompt": "Loader is in a different assembly and does NOT derive from Config. Does this compile?",
+      "payload": {
+        "blocks": [
+          { "label": "Assembly 1", "code": "public class Config\n{\n    internal string Key;\n}" },
+          { "label": "Assembly 2 (references Assembly 1)", "code": "class Loader\n{\n    void Read(Config c) => Use(c.Key);\n}" }
+        ],
+        "options": [
+          { "id": "ok", "label": "✅ Compiles — accessible" },
+          { "id": "err", "label": "❌ Compiler error — inaccessible" }
+        ]
+      },
+      "solution": { "optionId": "err" },
+      "failStates": [
+        {
+          "when": { "optionId": "ok" },
+          "title": "internal stops at the assembly boundary",
+          "explain": "internal means 'anyone in the SAME assembly.' Assembly 2 is a different assembly, so Key is inaccessible (CS0122). Assembly 1 could opt in explicitly with [InternalsVisibleTo(\"Assembly2\")]."
+        }
+      ]
+    },
+    {
+      "id": "access-l4",
+      "zone": "access",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L4 · protected internal — the OR",
+      "prompt": "Tools is in the SAME assembly but does NOT derive from BaseApi. Does this compile?",
+      "payload": {
+        "blocks": [
+          { "label": "The member", "code": "public class BaseApi\n{\n    protected internal int Version;\n}" },
+          { "label": "Same assembly, NOT a derived class", "code": "class Tools\n{\n    void Bump(BaseApi b) => b.Version++;\n}" }
+        ],
+        "options": [
+          { "id": "ok", "label": "✅ Compiles — accessible" },
+          { "id": "err", "label": "❌ Compiler error — inaccessible" }
+        ]
+      },
+      "solution": { "optionId": "ok" },
+      "failStates": [
+        {
+          "when": { "optionId": "err" },
+          "title": "protected internal is OR, not AND",
+          "explain": "protected internal = protected OR internal. Tools isn't derived, but it IS in the same assembly, so the 'internal' half alone grants access. Either condition is enough."
+        }
+      ]
+    },
+    {
+      "id": "access-l5",
+      "zone": "access",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L5 · private protected — the AND",
+      "prompt": "Plugin derives from BaseApi, but lives in a DIFFERENT assembly. Does this compile?",
+      "payload": {
+        "blocks": [
+          { "label": "Assembly 1", "code": "public class BaseApi\n{\n    private protected int Secret;\n}" },
+          { "label": "Assembly 2 (references Assembly 1)", "code": "class Plugin : BaseApi\n{\n    void Peek() => Secret = 1;\n}" }
+        ],
+        "options": [
+          { "id": "ok", "label": "✅ Compiles — accessible" },
+          { "id": "err", "label": "❌ Compiler error — inaccessible" }
+        ]
+      },
+      "solution": { "optionId": "err" },
+      "failStates": [
+        {
+          "when": { "optionId": "ok" },
+          "title": "private protected needs BOTH conditions",
+          "explain": "private protected = protected AND internal: you must be a derived class AND in the same assembly. Plugin derives, but it's in another assembly, so it fails the 'same assembly' half — CS0122."
+        }
+      ]
+    }
+  ]
+}

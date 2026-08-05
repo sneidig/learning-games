@@ -1,0 +1,66 @@
+{
+  "id": "ladder",
+  "title": "The Restrictiveness Ladder",
+  "blurb": "Order the modifiers from most restrictive (top) to least (bottom) — by how much code can reach the member. Note: internal sits beside protected in the middle; the two can't be strictly ranked against each other, so this ladder uses the rest.",
+  "docs": [
+    { "label": "Microsoft Learn — Accessibility Levels", "url": "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/accessibility-levels" }
+  ],
+  "glossary": {
+    "private": "The narrowest: only the containing type can touch it.",
+    "private protected": "Slightly wider than private — derived types, but only within the same assembly (protected AND internal).",
+    "protected": "Derived types in any assembly.",
+    "protected internal": "The widest of the protected family — the whole assembly PLUS derived types anywhere (protected OR internal).",
+    "public": "The widest of all — any code in any assembly."
+  },
+  "levels": [
+    {
+      "id": "ladder-l1",
+      "zone": "ladder",
+      "tier": "free",
+      "primitive": "ordering",
+      "title": "L1 · The core four",
+      "prompt": "Most restrictive at the top, least at the bottom.",
+      "payload": { "tiles": ["public", "private", "protected internal", "private protected"] },
+      "solution": { "order": ["private", "private protected", "protected internal", "public"] },
+      "failStates": [
+        {
+          "rule": { "type": "before", "a": "public", "b": "private protected" },
+          "title": "public is the least restrictive",
+          "explain": "public lets any code anywhere in. It belongs at the very bottom of the ladder, not near the top."
+        },
+        {
+          "rule": { "type": "before", "a": "private protected", "b": "private" },
+          "title": "private is narrower than private protected",
+          "explain": "private is the tightest — only the containing type. private protected adds same-assembly derived types, so it's slightly wider and goes below private."
+        }
+      ]
+    },
+    {
+      "id": "ladder-l2",
+      "zone": "ladder",
+      "tier": "free",
+      "primitive": "ordering",
+      "title": "L2 · Slot in protected",
+      "prompt": "Add protected to the ladder. Most restrictive at the top.",
+      "payload": { "tiles": ["protected internal", "protected", "public", "private", "private protected"] },
+      "solution": { "order": ["private", "private protected", "protected", "protected internal", "public"] },
+      "failStates": [
+        {
+          "rule": { "type": "before", "a": "protected internal", "b": "protected" },
+          "title": "protected internal is wider than protected",
+          "explain": "protected internal adds the whole assembly on top of what protected already allows, so it's LESS restrictive — it sits below protected."
+        },
+        {
+          "rule": { "type": "before", "a": "protected", "b": "private protected" },
+          "title": "private protected is narrower than protected",
+          "explain": "private protected restricts protected down to only same-assembly derived types, so it's more restrictive — it goes above protected."
+        },
+        {
+          "rule": { "type": "before", "a": "public", "b": "protected" },
+          "title": "public belongs at the bottom",
+          "explain": "public is the least restrictive of all — it always goes last."
+        }
+      ]
+    }
+  ]
+}

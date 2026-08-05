@@ -1,0 +1,279 @@
+{
+  "id": "di",
+  "title": "Dependency Injection — Service Lifetimes",
+  "blurb": "Before the request can enter the controller, the container assembles it from registered services. Give each service the right lifetime — Singleton, Scoped, or Transient — or the assembly is subtly (sometimes invisibly) broken.",
+  "docs": [
+    {
+      "label": "Microsoft Learn — Dependency injection & service lifetimes",
+      "url": "https://learn.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection"
+    }
+  ],
+  "glossary": {
+    "Singleton": "One instance for the whole app, shared by every request and thread. Use for stateless, thread-safe, or expensive-to-build services.",
+    "Scoped": "One instance per HTTP request, shared within that request. Use for per-request work like a DbContext — a unit of work that isn't thread-safe.",
+    "Transient": "A brand-new instance every time it's requested. Use for lightweight, stateless helpers with no shared state."
+  },
+  "levels": [
+    {
+      "id": "di-l1",
+      "zone": "di",
+      "tier": "free",
+      "primitive": "classify",
+      "title": "L1 · Pick the lifetime",
+      "prompt": "Read what each service is, then give it the right lifetime. The legend above explains each one.",
+      "payload": {
+        "categories": [
+          {
+            "id": "singleton",
+            "label": "Singleton"
+          },
+          {
+            "id": "scoped",
+            "label": "Scoped"
+          },
+          {
+            "id": "transient",
+            "label": "Transient"
+          }
+        ],
+        "items": [
+          {
+            "id": "dbcontext",
+            "label": "AppDbContext",
+            "note": "your EF Core unit of work; tracks changes for one request; not thread-safe"
+          },
+          {
+            "id": "config-cache",
+            "label": "AppConfigCache",
+            "note": "read-mostly settings shared by the whole app for its lifetime"
+          },
+          {
+            "id": "mapper",
+            "label": "EntityMapper",
+            "note": "a tiny stateless helper with no fields; cheap to build"
+          }
+        ]
+      },
+      "solution": {
+        "assignments": {
+          "dbcontext": "scoped",
+          "config-cache": "singleton",
+          "mapper": "transient"
+        }
+      },
+      "failStates": [
+        {
+          "when": {
+            "itemId": "dbcontext",
+            "categoryId": "singleton"
+          },
+          "title": "A Singleton DbContext leaks data",
+          "explain": "As a Singleton the DbContext is shared across every request and thread. It isn't thread-safe, and its change-tracker never resets — so request #2 sees request #1's data. It must be Scoped: one unit of work per request."
+        },
+        {
+          "when": {
+            "itemId": "dbcontext",
+            "categoryId": "transient"
+          },
+          "title": "Transient breaks the unit of work",
+          "explain": "Transient hands out a fresh DbContext on every injection, so different components in the same request no longer share one transaction / change-tracker. A request should have a single unit of work — that's Scoped."
+        },
+        {
+          "when": {
+            "itemId": "config-cache",
+            "categoryId": "transient"
+          },
+          "title": "Don't rebuild shared state",
+          "explain": "Rebuilding an app-wide cache on every resolve throws away the thing that makes it a cache. Shared, read-mostly state that lives for the app should be a Singleton."
+        },
+        {
+          "when": {
+            "itemId": "mapper",
+            "categoryId": "singleton"
+          },
+          "title": "A stateless helper doesn't need to be shared",
+          "explain": "It would work, but a stateless helper has no shared state to protect, so it doesn't need one global instance. The convention is Transient — cheap, new each time."
+        }
+      ]
+    },
+    {
+      "id": "di-l2",
+      "zone": "di",
+      "tier": "free",
+      "primitive": "classify",
+      "title": "L2 · The trickier ones",
+      "prompt": "Same call, harder services — including per-request state and an expensive shared client.",
+      "payload": {
+        "categories": [
+          {
+            "id": "singleton",
+            "label": "Singleton"
+          },
+          {
+            "id": "scoped",
+            "label": "Scoped"
+          },
+          {
+            "id": "transient",
+            "label": "Transient"
+          }
+        ],
+        "items": [
+          {
+            "id": "user-context",
+            "label": "CurrentUserContext",
+            "note": "holds the signed-in user/tenant for THIS request"
+          },
+          {
+            "id": "http-client",
+            "label": "PaymentsApiClient",
+            "note": "expensive to construct, thread-safe, reused across requests"
+          },
+          {
+            "id": "logger",
+            "label": "AppLogger",
+            "note": "framework-provided logging, shared app-wide"
+          },
+          {
+            "id": "validator",
+            "label": "OrderValidator",
+            "note": "no state; checks one order and is done"
+          },
+          {
+            "id": "dbcontext2",
+            "label": "AppDbContext",
+            "note": "EF Core unit of work; not thread-safe"
+          }
+        ]
+      },
+      "solution": {
+        "assignments": {
+          "user-context": "scoped",
+          "http-client": "singleton",
+          "logger": "singleton",
+          "validator": "transient",
+          "dbcontext2": "scoped"
+        }
+      },
+      "failStates": [
+        {
+          "when": {
+            "itemId": "user-context",
+            "categoryId": "singleton"
+          },
+          "title": "Per-request state can't be a Singleton",
+          "explain": "A Singleton CurrentUserContext is shared across all requests, so user A's request could read user B's identity. Anything tied to the current request must be Scoped."
+        },
+        {
+          "when": {
+            "itemId": "user-context",
+            "categoryId": "transient"
+          },
+          "title": "Transient loses the shared request view",
+          "explain": "Transient gives each component its own CurrentUserContext, so they may disagree within one request. It should be one-per-request: Scoped."
+        },
+        {
+          "when": {
+            "itemId": "http-client",
+            "categoryId": "transient"
+          },
+          "title": "Don't rebuild an expensive client",
+          "explain": "Constructing a costly, thread-safe client on every request wastes work (and can exhaust sockets). Build it once and share it: Singleton."
+        },
+        {
+          "when": {
+            "itemId": "http-client",
+            "categoryId": "scoped"
+          },
+          "title": "Scoped still rebuilds too often",
+          "explain": "Scoped makes a new client every request. Since it's thread-safe and expensive, one shared instance for the app is better: Singleton."
+        },
+        {
+          "when": {
+            "itemId": "validator",
+            "categoryId": "singleton"
+          },
+          "title": "Stateless → Transient",
+          "explain": "A stateless validator has nothing to share or protect, so a single global instance buys nothing. Transient is the convention."
+        }
+      ]
+    },
+    {
+      "id": "di-l3",
+      "zone": "di",
+      "tier": "free",
+      "primitive": "spotBug",
+      "title": "L3 · The captive dependency",
+      "prompt": "This app leaks data between requests. Find the bad registration and pick the fix.",
+      "payload": {
+        "intro": "Lifetimes must flow long → short down the graph: a long-lived service may only depend on equally- or longer-lived services.",
+        "nodes": [
+          {
+            "id": "cache",
+            "label": "CacheService",
+            "sub": "Singleton  →  depends on AppDbContext"
+          },
+          {
+            "id": "db",
+            "label": "AppDbContext",
+            "sub": "Scoped"
+          },
+          {
+            "id": "mapper",
+            "label": "EntityMapper",
+            "sub": "Transient"
+          }
+        ],
+        "fixPrompt": "How do you fix it?",
+        "fixes": [
+          {
+            "id": "scopefactory",
+            "label": "Inject IServiceScopeFactory into CacheService; create a scope and resolve AppDbContext inside it per use"
+          },
+          {
+            "id": "db-singleton",
+            "label": "Register AppDbContext as a Singleton too"
+          },
+          {
+            "id": "cache-transient",
+            "label": "Register CacheService as Transient"
+          }
+        ]
+      },
+      "solution": {
+        "nodeId": "cache",
+        "fixId": "scopefactory"
+      },
+      "failStates": [
+        {
+          "when": {
+            "nodeId": "db"
+          },
+          "title": "The DbContext's lifetime is correct",
+          "explain": "AppDbContext SHOULD be Scoped — one unit of work per request. The bug is the Singleton that captures it, holding one DbContext alive forever and leaking data across requests."
+        },
+        {
+          "when": {
+            "nodeId": "mapper"
+          },
+          "title": "The Transient mapper is fine",
+          "explain": "A Transient has the shortest life, so nothing captures it here. Look for a long-lived service depending on a shorter-lived one."
+        },
+        {
+          "when": {
+            "fixId": "db-singleton"
+          },
+          "title": "That makes the leak permanent",
+          "explain": "Promoting AppDbContext to Singleton means one shared, non-thread-safe DbContext for the whole app — the captive-dependency disaster made official. Never lengthen the captive's life."
+        },
+        {
+          "when": {
+            "fixId": "cache-transient"
+          },
+          "title": "That throws away the cache",
+          "explain": "A Transient cache is rebuilt on every resolve, so it caches nothing. Keep CacheService a Singleton and pull a fresh DbContext from a created scope only when it needs one."
+        }
+      ]
+    }
+  ]
+}

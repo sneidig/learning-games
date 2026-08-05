@@ -1,0 +1,173 @@
+{
+  "id": "space",
+  "title": "Time for Space",
+  "blurb": "Big O isn't only about time — it's also the EXTRA memory an algorithm uses beyond its input. Sort each approach by how much extra space it needs. This is the 'trade memory for speed' dimension interviewers love.",
+  "docs": [
+    {
+      "label": "Big-O Cheat Sheet — space complexity",
+      "url": "https://www.bigocheatsheet.com/"
+    }
+  ],
+  "glossary": {
+    "O(1) extra space": "A fixed amount of extra memory no matter the input size — a few variables, counters, or pointers. These are the 'in-place' algorithms.",
+    "O(n) extra space": "Extra memory that grows with the input — a hash set, dictionary, or stack that can end up holding as many items as the input."
+  },
+  "levels": [
+    {
+      "id": "space-l1",
+      "zone": "space",
+      "tier": "free",
+      "primitive": "classify",
+      "title": "L1 · How much extra memory?",
+      "prompt": "Classify each approach by the EXTRA space it uses (ignore the input itself).",
+      "hint": "Which of these can grow to hold as many items as the input, and which keep just a few variables?",
+      "payload": {
+        "categories": [
+          {
+            "id": "o1",
+            "label": "O(1) extra space"
+          },
+          {
+            "id": "on",
+            "label": "O(n) extra space"
+          }
+        ],
+        "items": [
+          {
+            "id": "hashset",
+            "label": "Contains Duplicate with a HashSet",
+            "note": "adds each element to a set"
+          },
+          {
+            "id": "twoptr",
+            "label": "Valid Palindrome with two pointers",
+            "note": "two index variables"
+          },
+          {
+            "id": "dict",
+            "label": "Two Sum with a Dictionary",
+            "note": "maps values seen so far"
+          },
+          {
+            "id": "xor",
+            "label": "Single Number with XOR",
+            "note": "one accumulator variable"
+          }
+        ]
+      },
+      "solution": {
+        "assignments": {
+          "hashset": "on",
+          "twoptr": "o1",
+          "dict": "on",
+          "xor": "o1"
+        }
+      },
+      "explain": "Extra space is the memory used beyond the input. A HashSet or Dictionary can grow to hold up to n items → O(n), while two pointers or a single XOR accumulator use a fixed few variables → O(1).",
+      "failStates": [
+        {
+          "when": {
+            "itemId": "hashset",
+            "categoryId": "o1"
+          },
+          "title": "A HashSet can hold everything",
+          "explain": "In the worst case the set stores all n elements → O(n) extra space. That memory is exactly what you 'spend' to get O(1) lookups and O(n) time."
+        },
+        {
+          "when": {
+            "itemId": "twoptr",
+            "categoryId": "on"
+          },
+          "title": "Two pointers are just two ints",
+          "explain": "No matter how long the string, you only ever hold two index variables → O(1) extra space. That's the appeal of the two-pointer pattern."
+        },
+        {
+          "when": {
+            "itemId": "xor",
+            "categoryId": "on"
+          },
+          "title": "XOR keeps a single number",
+          "explain": "The whole trick is one accumulator → O(1) extra space, even though it visits all n elements (O(n) time)."
+        }
+      ]
+    },
+    {
+      "id": "space-l2",
+      "zone": "space",
+      "tier": "free",
+      "primitive": "classify",
+      "title": "L2 · In-place or not?",
+      "prompt": "Same idea, a few more. Which need memory that grows with n?",
+      "hint": "Does it allocate something that scales with n, or does it work in place?",
+      "payload": {
+        "categories": [
+          {
+            "id": "o1",
+            "label": "O(1) extra space"
+          },
+          {
+            "id": "on",
+            "label": "O(n) extra space"
+          }
+        ],
+        "items": [
+          {
+            "id": "boyer",
+            "label": "Majority Element (Boyer-Moore voting)",
+            "note": "a candidate + a counter"
+          },
+          {
+            "id": "stack",
+            "label": "Valid Parentheses with a Stack",
+            "note": "pushes open brackets"
+          },
+          {
+            "id": "reverse",
+            "label": "Reverse an array by swapping ends",
+            "note": "swaps in place"
+          },
+          {
+            "id": "freq",
+            "label": "Count word frequencies into a Dictionary",
+            "note": "one entry per distinct word"
+          }
+        ]
+      },
+      "solution": {
+        "assignments": {
+          "boyer": "o1",
+          "stack": "on",
+          "reverse": "o1",
+          "freq": "on"
+        }
+      },
+      "explain": "In-place work is O(1): Boyer-Moore keeps a candidate + counter, and reversing swaps ends with a temp variable. Anything that can grow with the input — a stack of brackets, a frequency dictionary — is O(n).",
+      "failStates": [
+        {
+          "when": {
+            "itemId": "boyer",
+            "categoryId": "on"
+          },
+          "title": "Boyer-Moore is O(1) space",
+          "explain": "It keeps only a candidate and a counter — O(1) extra space. That's what makes it beat the hash-map / sorting approaches on memory."
+        },
+        {
+          "when": {
+            "itemId": "stack",
+            "categoryId": "o1"
+          },
+          "title": "The stack can grow to n",
+          "explain": "For a string of all opening brackets, the stack holds all n of them before anything is popped → O(n) extra space."
+        },
+        {
+          "when": {
+            "itemId": "reverse",
+            "categoryId": "on"
+          },
+          "title": "Swapping in place is O(1)",
+          "explain": "Reversing by swapping the ends toward the middle uses just a temp variable and two indices — O(1) extra space. No second array is allocated."
+        }
+      ]
+    }
+  ]
+}

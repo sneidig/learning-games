@@ -1,0 +1,172 @@
+{
+  "id": "routing",
+  "title": "Routing & Attributes",
+  "blurb": "The request has a URL and a verb. Routing decides which action handles it — or returns 404 (no match), 405 (wrong verb), or 500 (ambiguous). Read the candidates and predict the winner.",
+  "docs": [
+    {
+      "label": "Microsoft Learn — Routing to controller actions",
+      "url": "https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/routing"
+    }
+  ],
+  "levels": [
+    {
+      "id": "routing-l1",
+      "zone": "routing",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L1 · Which action matches?",
+      "prompt": "Given the request and the two candidate actions, which one does the router select?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Incoming request",
+            "code": "GET /products/42"
+          },
+          {
+            "label": "Candidate actions",
+            "code": "[HttpGet(\"products\")]        Index()\n[HttpGet(\"products/{id}\")]   Details(int id)"
+          }
+        ],
+        "options": [
+          {
+            "id": "index",
+            "label": "Index() — template \"products\""
+          },
+          {
+            "id": "details",
+            "label": "Details(int id) — template \"products/{id}\""
+          },
+          {
+            "id": "404",
+            "label": "404 Not Found — nothing matches"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "details"
+      },
+      "failStates": [
+        {
+          "when": {
+            "optionId": "index"
+          },
+          "title": "That template is one segment short",
+          "explain": "\"products\" matches only /products. The URL has a second segment (42), so the template with the {id} placeholder is the one that matches."
+        },
+        {
+          "when": {
+            "optionId": "404"
+          },
+          "title": "There IS a match",
+          "explain": "products/{id} captures 42 into id. You only get a 404 when no template matches the path at all."
+        }
+      ]
+    },
+    {
+      "id": "routing-l2",
+      "zone": "routing",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L2 · Route constraints",
+      "prompt": "Constraints filter which template can match. Where does this URL go?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Incoming request",
+            "code": "GET /products/shoes"
+          },
+          {
+            "label": "Candidate actions",
+            "code": "[HttpGet(\"products/{id:int}\")]  ById(int id)\n[HttpGet(\"products/{slug}\")]    BySlug(string slug)"
+          }
+        ],
+        "options": [
+          {
+            "id": "byid",
+            "label": "ById(int id)"
+          },
+          {
+            "id": "byslug",
+            "label": "BySlug(string slug)"
+          },
+          {
+            "id": "404",
+            "label": "404 Not Found"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "byslug"
+      },
+      "failStates": [
+        {
+          "when": {
+            "optionId": "byid"
+          },
+          "title": "\"shoes\" isn't an int",
+          "explain": "The :int constraint rejects \"shoes\", so that route is skipped entirely. The unconstrained {slug} template then matches."
+        },
+        {
+          "when": {
+            "optionId": "404"
+          },
+          "title": "The slug route still matches",
+          "explain": "Only the :int route fails its constraint. {slug} accepts any string, so the request routes to BySlug — not a 404."
+        }
+      ]
+    },
+    {
+      "id": "routing-l3",
+      "zone": "routing",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L3 · Right path, wrong verb",
+      "prompt": "The path matches a route, but look at the verb.",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Incoming request",
+            "code": "POST /products/42"
+          },
+          {
+            "label": "Only matching action",
+            "code": "[HttpGet(\"products/{id}\")]  Details(int id)"
+          }
+        ],
+        "options": [
+          {
+            "id": "runs",
+            "label": "Details() runs anyway"
+          },
+          {
+            "id": "404",
+            "label": "404 Not Found"
+          },
+          {
+            "id": "405",
+            "label": "405 Method Not Allowed"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "405"
+      },
+      "failStates": [
+        {
+          "when": {
+            "optionId": "404"
+          },
+          "title": "The path DID match",
+          "explain": "A 404 means no route matched the path. Here the path matched but the verb (POST vs GET) didn't — that's a 405, Method Not Allowed."
+        },
+        {
+          "when": {
+            "optionId": "runs"
+          },
+          "title": "The verb gate blocks it",
+          "explain": "[HttpGet] restricts the action to GET. A POST to the same path is rejected with 405 before the action runs."
+        }
+      ]
+    }
+  ]
+}

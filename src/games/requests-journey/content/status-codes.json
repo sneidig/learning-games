@@ -1,0 +1,173 @@
+{
+  "id": "status-codes",
+  "title": "Controller → ActionResult → Status Codes",
+  "blurb": "The request reached the controller. Now match each ActionResult helper to the HTTP status code it actually returns — including the pairs everyone confuses.",
+  "docs": [
+    {
+      "label": "Microsoft Learn — Controller action return types",
+      "url": "https://learn.microsoft.com/en-us/aspnet/core/web-api/action-return-types"
+    }
+  ],
+  "levels": [
+    {
+      "id": "status-l1",
+      "zone": "status-codes",
+      "tier": "free",
+      "primitive": "matching",
+      "title": "L1 · The everyday four",
+      "prompt": "Connect each ActionResult helper to the status code it returns.",
+      "payload": {
+        "left": [
+          {
+            "id": "ok",
+            "label": "Ok()",
+            "note": "return a result body"
+          },
+          {
+            "id": "notfound",
+            "label": "NotFound()",
+            "note": "resource doesn't exist"
+          },
+          {
+            "id": "badrequest",
+            "label": "BadRequest()",
+            "note": "malformed input"
+          },
+          {
+            "id": "created",
+            "label": "CreatedAtAction()",
+            "note": "a new resource was made"
+          }
+        ],
+        "right": [
+          {
+            "id": "200",
+            "label": "200"
+          },
+          {
+            "id": "404",
+            "label": "404"
+          },
+          {
+            "id": "400",
+            "label": "400"
+          },
+          {
+            "id": "201",
+            "label": "201"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "ok": "200",
+          "notfound": "404",
+          "badrequest": "400",
+          "created": "201"
+        }
+      },
+      "failStates": [
+        {
+          "when": {
+            "leftId": "created",
+            "rightId": "200"
+          },
+          "title": "Created is 201, not 200",
+          "explain": "CreatedAtAction() returns 201 and sets a Location header pointing at the new resource. 200 is for a plain successful read/update with no 'something new was created' semantics."
+        },
+        {
+          "when": {
+            "leftId": "ok",
+            "rightId": "201"
+          },
+          "title": "Ok() is 200, not 201",
+          "explain": "Ok() is a 200 — success with a body. 201 specifically signals a resource was created and comes from Created()/CreatedAtAction()."
+        }
+      ]
+    },
+    {
+      "id": "status-l2",
+      "zone": "status-codes",
+      "tier": "free",
+      "primitive": "matching",
+      "title": "L2 · The confusing pairs",
+      "prompt": "These are the ones people mix up. Match each helper to its code.",
+      "payload": {
+        "left": [
+          {
+            "id": "unauthorized",
+            "label": "Unauthorized()",
+            "note": "no/invalid credentials"
+          },
+          {
+            "id": "forbid",
+            "label": "Forbid()",
+            "note": "known user, not allowed"
+          },
+          {
+            "id": "nocontent",
+            "label": "NoContent()",
+            "note": "success, nothing to return"
+          },
+          {
+            "id": "unprocessable",
+            "label": "UnprocessableEntity()",
+            "note": "well-formed but invalid"
+          }
+        ],
+        "right": [
+          {
+            "id": "401",
+            "label": "401"
+          },
+          {
+            "id": "403",
+            "label": "403"
+          },
+          {
+            "id": "204",
+            "label": "204"
+          },
+          {
+            "id": "422",
+            "label": "422"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "unauthorized": "401",
+          "forbid": "403",
+          "nocontent": "204",
+          "unprocessable": "422"
+        }
+      },
+      "failStates": [
+        {
+          "when": {
+            "leftId": "forbid",
+            "rightId": "401"
+          },
+          "title": "403 vs 401",
+          "explain": "Forbid() is 403: 'I know who you are, and you're not allowed.' 401 is 'I don't know who you are — authenticate first.' Authentication problem → 401; permission problem → 403."
+        },
+        {
+          "when": {
+            "leftId": "unauthorized",
+            "rightId": "403"
+          },
+          "title": "401 vs 403",
+          "explain": "Unauthorized() is 401 — credentials are missing or invalid. 403 (Forbid) is for an authenticated user who simply isn't permitted."
+        },
+        {
+          "when": {
+            "leftId": "unprocessable",
+            "rightId": "400"
+          },
+          "title": "422 vs 400",
+          "explain": "400 means the request was malformed (couldn't even be parsed). 422 means it parsed fine but failed validation rules — well-formed, but semantically invalid."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,377 @@
+{
+  "id": "problems",
+  "title": "Spot the Big O — Real Problems",
+  "blurb": "Actual solutions to classic LeetCode warm-ups. Read each one and name its worst-case TIME complexity. Watch for the same problem solved two different ways.",
+  "docs": [
+    {
+      "label": "Big-O Cheat Sheet",
+      "url": "https://www.bigocheatsheet.com/"
+    }
+  ],
+  "levels": [
+    {
+      "id": "prob-contains",
+      "zone": "problems",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L1 · Contains Duplicate (HashSet)",
+      "prompt": "Time complexity of this solution?",
+      "hint": "One pass over the array — and how fast is a HashSet add/lookup?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "LeetCode 217 — Contains Duplicate",
+            "code": "bool ContainsDuplicate(int[] nums)\n{\n    var seen = new HashSet<int>();\n    foreach (int n in nums)\n        if (!seen.Add(n)) return true;\n    return false;\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "on2",
+            "label": "O(n²)"
+          },
+          {
+            "id": "onlogn",
+            "label": "O(n log n)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on"
+      },
+      "explain": "A single pass, and HashSet.Add / lookup are O(1) on average, so the whole method is O(n) — you trade O(n) space for the speed.",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "on2"
+          },
+          "title": "The hash set is the trick",
+          "explain": "It's a single pass, and HashSet.Add / lookup are O(1) on average — so the whole thing is O(n). The O(n²) version is the brute-force double loop that compares every pair."
+        },
+        {
+          "when": {
+            "optionId": "onlogn"
+          },
+          "title": "No sorting involved",
+          "explain": "You'd get O(n log n) if you sorted first and scanned for neighbors. Here the hash set gives O(1) membership, so one pass = O(n)."
+        }
+      ]
+    },
+    {
+      "id": "prob-twosum-brute",
+      "zone": "problems",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L2 · Two Sum (brute force)",
+      "prompt": "Time complexity of this solution?",
+      "hint": "Count the loops. What runs inside what?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "LeetCode 1 — Two Sum, nested-loop version",
+            "code": "int[] TwoSum(int[] nums, int target)\n{\n    for (int i = 0; i < nums.Length; i++)\n        for (int j = i + 1; j < nums.Length; j++)\n            if (nums[i] + nums[j] == target)\n                return new[] { i, j };\n    return null;\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "on2",
+            "label": "O(n²)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on2"
+      },
+      "explain": "Nested loops compare every pair of elements → O(n²). This is the version you’d want to improve in an interview.",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "on"
+          },
+          "title": "Nested loops over the array",
+          "explain": "For each i, the inner loop scans the rest of the array — n × n / 2 comparisons in the worst case → O(n²). This is the version you'd want to improve in an interview."
+        }
+      ]
+    },
+    {
+      "id": "prob-twosum-hash",
+      "zone": "problems",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L3 · Two Sum (hash map)",
+      "prompt": "Same problem, different approach. Time complexity?",
+      "hint": "The Dictionary replaces a search with a lookup. How fast is that lookup, and how many passes are left?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "LeetCode 1 — Two Sum, dictionary version",
+            "code": "int[] TwoSum(int[] nums, int target)\n{\n    var seen = new Dictionary<int, int>();\n    for (int i = 0; i < nums.Length; i++)\n    {\n        int need = target - nums[i];\n        if (seen.TryGetValue(need, out int j))\n            return new[] { j, i };\n        seen[nums[i]] = i;\n    }\n    return null;\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "on2",
+            "label": "O(n²)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on"
+      },
+      "explain": "The dictionary makes each “have I seen the complement?” check O(1), removing the inner loop — one pass = O(n), at the cost of O(n) extra space.",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "on2"
+          },
+          "title": "The dictionary removes the inner loop",
+          "explain": "TryGetValue is O(1) on average, so the inner search vanishes — one pass = O(n). This is the exact 'nested loops → hash map' upgrade: O(n) time at the cost of O(n) extra space."
+        }
+      ]
+    },
+    {
+      "id": "prob-anagram",
+      "zone": "problems",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L4 · Valid Anagram (sort)",
+      "prompt": "Time complexity of this solution?",
+      "hint": "There are two operations here — a comparison and a sort. Which one grows faster and dominates?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "LeetCode 242 — Valid Anagram, sort version",
+            "code": "bool IsAnagram(string s, string t)\n{\n    if (s.Length != t.Length) return false;\n    char[] a = s.ToCharArray();\n    char[] b = t.ToCharArray();\n    Array.Sort(a);\n    Array.Sort(b);\n    return a.SequenceEqual(b);\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "onlogn",
+            "label": "O(n log n)"
+          },
+          {
+            "id": "on2",
+            "label": "O(n²)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "onlogn"
+      },
+      "explain": "SequenceEqual is O(n), but Array.Sort is O(n log n) and the largest term wins, so the method is O(n log n). Counting letters into a size-26 array instead of sorting would make it O(n).",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "on"
+          },
+          "title": "The sort dominates",
+          "explain": "SequenceEqual is O(n), but Array.Sort is O(n log n) — and the biggest term wins. So the whole method is O(n log n). (Counting letters into a size-26 array instead of sorting would make it O(n).)"
+        },
+        {
+          "when": {
+            "optionId": "on2"
+          },
+          "title": "Array.Sort isn't quadratic",
+          "explain": ".NET's Array.Sort is O(n log n), not O(n²). There are no nested loops here."
+        }
+      ]
+    },
+    {
+      "id": "prob-palindrome",
+      "zone": "problems",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L5 · Valid Palindrome (two pointers)",
+      "prompt": "Time complexity of this solution?",
+      "hint": "Two pointers, sure — but how many characters do they cover between them?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "LeetCode 125 — Valid Palindrome",
+            "code": "bool IsPalindrome(string s)\n{\n    int i = 0, j = s.Length - 1;\n    while (i < j)\n    {\n        if (char.ToLower(s[i]) != char.ToLower(s[j]))\n            return false;\n        i++;\n        j--;\n    }\n    return true;\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "o1",
+            "label": "O(1)"
+          },
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "on2",
+            "label": "O(n²)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on"
+      },
+      "explain": "The two pointers move toward each other and together cover all n characters once → O(n) time. Two pointers save space (O(1)), not time.",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "o1"
+          },
+          "title": "Two pointers still cross the whole string",
+          "explain": "The two pointers move toward each other until they meet — together they cover all n characters → O(n) time. Two pointers cut the SPACE to O(1), but the time is still linear."
+        },
+        {
+          "when": {
+            "optionId": "on2"
+          },
+          "title": "It's one pass, not nested",
+          "explain": "There's a single while-loop; each character is looked at once. That's O(n)."
+        }
+      ]
+    },
+    {
+      "id": "prob-majority",
+      "zone": "problems",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L6 · Majority Element",
+      "prompt": "Time complexity of this solution?",
+      "hint": "Is anything sorted here? How many passes over the array does it take?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "LeetCode 169 — Majority Element, voting",
+            "code": "int MajorityElement(int[] nums)\n{\n    int count = 0, candidate = 0;\n    foreach (int n in nums)\n    {\n        if (count == 0) candidate = n;\n        count += (n == candidate) ? 1 : -1;\n    }\n    return candidate;\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "onlogn",
+            "label": "O(n log n)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on"
+      },
+      "explain": "It makes a single pass over the array, keeping just a running candidate and a counter (a trick called Boyer-Moore voting), so it's O(n) time and O(1) space — beating the sort-and-take-the-middle approach.",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "onlogn"
+          },
+          "title": "No sort — a single voting pass",
+          "explain": "It's a single pass over the array (just a candidate and a counter — the Boyer-Moore voting trick), O(1) extra space → O(n) time. The alternative, sorting and taking the middle element, is O(n log n); this beats it."
+        }
+      ]
+    },
+    {
+      "id": "prob-single",
+      "zone": "problems",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L7 · Single Number",
+      "prompt": "Time complexity of this solution?",
+      "hint": "It still runs one loop over the whole array — how many elements is that?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "LeetCode 136 — Single Number",
+            "code": "int SingleNumber(int[] nums)\n{\n    int result = 0;\n    foreach (int n in nums)\n        result ^= n;\n    return result;\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "o1",
+            "label": "O(1)"
+          },
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "on2",
+            "label": "O(n²)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on"
+      },
+      "explain": "The loop runs once per element, so it's O(n) time. (The clever bit — XOR, the ^ operator that combines the numbers bit by bit — is what makes it O(1) space; it doesn't change the time.)",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "o1"
+          },
+          "title": "It still visits every element",
+          "explain": "The loop still runs once per element → O(n) time. The clever, O(1)-space part is the single running total, not the time."
+        },
+        {
+          "when": {
+            "optionId": "on2"
+          },
+          "title": "Single pass, no nesting",
+          "explain": "One loop over the array, one operation each — O(n)."
+        }
+      ]
+    },
+    {
+      "id": "prob-parens",
+      "zone": "problems",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L8 · Valid Parentheses (stack)",
+      "prompt": "Time complexity of this solution?",
+      "hint": "How many times is each character pushed or popped, and how fast are Push/Pop?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "LeetCode 20 — Valid Parentheses",
+            "code": "bool IsValid(string s)\n{\n    var stack = new Stack<char>();\n    foreach (char c in s)\n    {\n        if (c == '(' || c == '[' || c == '{')\n            stack.Push(c);\n        else if (stack.Count == 0 || !Matches(stack.Pop(), c))\n            return false;\n    }\n    return stack.Count == 0;\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "on2",
+            "label": "O(n²)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on"
+      },
+      "explain": "Each character is pushed or popped at most once, and both are O(1), so a single pass is O(n) time (with O(n) space for the stack).",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "on2"
+          },
+          "title": "Each char is pushed/popped once",
+          "explain": "One pass over the string; Push and Pop are O(1) each, and every character is handled at most twice → O(n) time (and O(n) space for the stack)."
+        }
+      ]
+    }
+  ]
+}

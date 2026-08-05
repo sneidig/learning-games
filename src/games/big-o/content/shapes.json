@@ -1,0 +1,165 @@
+{
+  "id": "shapes",
+  "title": "Name That Growth",
+  "blurb": "Most complexities come from a recognizable code shape. Match each Big-O to the pattern that usually produces it — this is the mental shortcut you use in interviews.",
+  "docs": [
+    {
+      "label": "Big-O Cheat Sheet — common operations",
+      "url": "https://www.bigocheatsheet.com/"
+    }
+  ],
+  "levels": [
+    {
+      "id": "shapes-l1",
+      "zone": "shapes",
+      "tier": "free",
+      "primitive": "matching",
+      "title": "L1 · The everyday shapes",
+      "prompt": "Match each complexity to the code pattern that causes it.",
+      "hint": "For each pattern ask: how many elements does it touch, and how many times?",
+      "payload": {
+        "leftTitle": "Complexity",
+        "rightTitle": "What usually causes it",
+        "left": [
+          {
+            "id": "const",
+            "label": "O(1)"
+          },
+          {
+            "id": "log",
+            "label": "O(log n)"
+          },
+          {
+            "id": "lin",
+            "label": "O(n)"
+          },
+          {
+            "id": "quad",
+            "label": "O(n²)"
+          }
+        ],
+        "right": [
+          {
+            "id": "lookup",
+            "label": "a hash-map / array lookup, or fixed arithmetic"
+          },
+          {
+            "id": "halve",
+            "label": "halving the search range each step (binary search)"
+          },
+          {
+            "id": "onepass",
+            "label": "a single pass over the input"
+          },
+          {
+            "id": "nested",
+            "label": "nested loops over the same input"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "const": "lookup",
+          "log": "halve",
+          "lin": "onepass",
+          "quad": "nested"
+        }
+      },
+      "explain": "The mental shortcut: constant work → O(1); halving the range each step → O(log n); one full pass → O(n); nested loops over the same data → O(n²).",
+      "failStates": [
+        {
+          "when": {
+            "leftId": "const",
+            "rightId": "onepass"
+          },
+          "title": "A single pass is O(n), not O(1)",
+          "explain": "Touching every element once scales with n → O(n). O(1) is when the work is fixed no matter how big the input is — like one dictionary lookup."
+        },
+        {
+          "when": {
+            "leftId": "log",
+            "rightId": "onepass"
+          },
+          "title": "O(log n) never touches most elements",
+          "explain": "A full pass is O(n). O(log n) means you discard a fraction each step (like binary search) and only ever look at ~log n elements."
+        }
+      ]
+    },
+    {
+      "id": "shapes-l2",
+      "zone": "shapes",
+      "tier": "free",
+      "primitive": "matching",
+      "title": "L2 · Add sorting and brute force",
+      "prompt": "Two more shapes worth recognizing on sight.",
+      "hint": "Which pattern divides-and-conquers (a log factor), and which explores every combination?",
+      "payload": {
+        "leftTitle": "Complexity",
+        "rightTitle": "What usually causes it",
+        "left": [
+          {
+            "id": "nlogn",
+            "label": "O(n log n)"
+          },
+          {
+            "id": "exp",
+            "label": "O(2ⁿ)"
+          },
+          {
+            "id": "lin",
+            "label": "O(n)"
+          },
+          {
+            "id": "quad",
+            "label": "O(n²)"
+          }
+        ],
+        "right": [
+          {
+            "id": "sort",
+            "label": "sorting the input, then a linear pass"
+          },
+          {
+            "id": "subsets",
+            "label": "trying every subset / naive recursive branching"
+          },
+          {
+            "id": "onepass",
+            "label": "a single pass over the input"
+          },
+          {
+            "id": "nested",
+            "label": "nested loops over the same input"
+          }
+        ]
+      },
+      "solution": {
+        "pairs": {
+          "nlogn": "sort",
+          "exp": "subsets",
+          "lin": "onepass",
+          "quad": "nested"
+        }
+      },
+      "explain": "Sorting-then-scanning is O(n log n) because the sort dominates; trying every subset or branching recursively is O(2ⁿ). A single pass stays O(n) and nesting stays O(n²).",
+      "failStates": [
+        {
+          "when": {
+            "leftId": "quad",
+            "rightId": "sort"
+          },
+          "title": "Sorting is O(n log n), not O(n²)",
+          "explain": "A good sort (merge/quick) is O(n log n). O(n²) comes from nested loops over the same data — a different shape entirely."
+        },
+        {
+          "when": {
+            "leftId": "nlogn",
+            "rightId": "nested"
+          },
+          "title": "Nested loops give O(n²)",
+          "explain": "Two nested passes over the same input multiply → n × n = O(n²). The log factor in O(n log n) comes from divide-and-conquer (like sorting), not nesting."
+        }
+      ]
+    }
+  ]
+}

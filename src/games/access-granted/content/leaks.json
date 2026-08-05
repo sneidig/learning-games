@@ -1,0 +1,101 @@
+{
+  "id": "leaks",
+  "title": "Spot the Accessibility Leak",
+  "blurb": "A member can't be more accessible than the types it exposes. These snippets won't compile — find the declaration that leaks a less-accessible type, and pick the fix.",
+  "docs": [
+    { "label": "Microsoft Learn — Access Modifiers (accessibility consistency)", "url": "https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/access-modifiers" }
+  ],
+  "levels": [
+    {
+      "id": "leaks-l1",
+      "zone": "leaks",
+      "tier": "free",
+      "primitive": "spotBug",
+      "title": "L1 · The exposed return type",
+      "prompt": "One line here causes a CS0050 'inconsistent accessibility' error. Which declaration, and how do you fix it?",
+      "payload": {
+        "intro": "All four declarations live in the same public class.",
+        "nodes": [
+          { "id": "dto", "label": "internal class OrderDto { … }", "sub": "an internal type" },
+          { "id": "method", "label": "public OrderDto GetOrder(int id)", "sub": "public method returning OrderDto" },
+          { "id": "field", "label": "private readonly int _count;", "sub": "private field" },
+          { "id": "name", "label": "public string Name { get; set; }", "sub": "public property of type string" }
+        ],
+        "fixPrompt": "Pick the fix:",
+        "fixes": [
+          { "id": "makepublic", "label": "Make OrderDto public" },
+          { "id": "ivt", "label": "Add [InternalsVisibleTo] to the assembly" },
+          { "id": "nothing", "label": "Nothing — it compiles fine" }
+        ]
+      },
+      "solution": { "nodeId": "method", "fixId": "makepublic" },
+      "failStates": [
+        {
+          "when": { "nodeId": "dto" },
+          "title": "internal on its own is fine",
+          "explain": "OrderDto being internal isn't the problem — plenty of types are internal. The error is the PUBLIC member that hands that internal type out. Look at GetOrder."
+        },
+        {
+          "when": { "nodeId": "name" },
+          "title": "string is public",
+          "explain": "A public property of type string is perfectly consistent — string is public. The leak is a public member exposing an internal type."
+        },
+        {
+          "when": { "fixId": "ivt" },
+          "title": "InternalsVisibleTo is a different tool",
+          "explain": "InternalsVisibleTo opens internals to a specific OTHER assembly (e.g. tests). It doesn't fix an inconsistent-accessibility error within this assembly. The return type must be at least as accessible as the method — make OrderDto public (or make the method internal)."
+        },
+        {
+          "when": { "fixId": "nothing" },
+          "title": "It genuinely won't compile",
+          "explain": "A public method can't return an internal type: CS0050, 'return type is less accessible than method'. The compiler rejects it."
+        }
+      ]
+    },
+    {
+      "id": "leaks-l2",
+      "zone": "leaks",
+      "tier": "free",
+      "primitive": "spotBug",
+      "title": "L2 · The exposed base class",
+      "prompt": "Another accessibility mismatch — this time about inheritance. Find the broken declaration and the fix.",
+      "payload": {
+        "intro": "Two types in the same assembly, plus a constructor.",
+        "nodes": [
+          { "id": "base", "label": "internal class RepositoryBase { … }", "sub": "an internal base class" },
+          { "id": "derived", "label": "public class UserRepository : RepositoryBase", "sub": "public class deriving from RepositoryBase" },
+          { "id": "ctor", "label": "public UserRepository() { }", "sub": "public constructor" }
+        ],
+        "fixPrompt": "Pick the fix:",
+        "fixes": [
+          { "id": "basepublic", "label": "Make RepositoryBase public" },
+          { "id": "ctorinternal", "label": "Make the constructor internal" },
+          { "id": "nothing", "label": "Nothing — it compiles fine" }
+        ]
+      },
+      "solution": { "nodeId": "derived", "fixId": "basepublic" },
+      "failStates": [
+        {
+          "when": { "nodeId": "ctor" },
+          "title": "The constructor isn't the leak",
+          "explain": "A public constructor is fine. The error is that a PUBLIC class derives from an INTERNAL base — the base type is less accessible than the class exposing it."
+        },
+        {
+          "when": { "nodeId": "base" },
+          "title": "The base being internal is only half the story",
+          "explain": "internal is a valid choice for a base class. The conflict is created by the public class that derives from it — that's the declaration the compiler flags (CS0060)."
+        },
+        {
+          "when": { "fixId": "ctorinternal" },
+          "title": "That doesn't touch the real problem",
+          "explain": "The constructor's accessibility is unrelated. The error is CS0060: a public class can't have an internal base. Make RepositoryBase public (or make UserRepository internal)."
+        },
+        {
+          "when": { "fixId": "nothing" },
+          "title": "It won't compile",
+          "explain": "CS0060, 'inconsistent accessibility: base class is less accessible than derived class.' A public class effectively exposes its base, so the base must be at least as accessible."
+        }
+      ]
+    }
+  ]
+}

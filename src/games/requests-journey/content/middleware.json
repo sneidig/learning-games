@@ -1,0 +1,208 @@
+{
+  "id": "middleware",
+  "title": "The Middleware Pipeline",
+  "blurb": "Order the app.Use*() calls so the request reaches its endpoint. Order is everything here — and getting it wrong fails in very specific ways.",
+  "docs": [
+    {
+      "label": "Microsoft Learn — ASP.NET Core Middleware",
+      "url": "https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/"
+    }
+  ],
+  "glossary": {
+    "UseExceptionHandler": "Catches unhandled exceptions thrown anywhere downstream and turns them into a clean error response. To cover the whole pipeline it must wrap everything, so it sits at the very top.",
+    "UseHsts": "Sends the Strict-Transport-Security header, telling browsers to only ever use HTTPS for this site. Runs very early, right after the exception handler (it's skipped in development).",
+    "UseHttpsRedirection": "Redirects any plain-HTTP request to HTTPS. Runs early so everything after it only deals with secure requests.",
+    "UseStaticFiles": "Serves files like CSS, JS, and images straight from disk and short-circuits the pipeline. Placed before routing and auth so a public asset doesn't pay for routing or demand a login.",
+    "UseRouting": "Matches the request to an endpoint and attaches its metadata. Anything that needs to know *which* endpoint was selected (CORS, authorization) must come after this.",
+    "UseCors": "Applies the Cross-Origin Resource Sharing policy. Runs after routing so it can read the selected endpoint's CORS policy, and before authentication/authorization.",
+    "UseAuthentication": "Works out *who* the user is — reads the cookie or token and builds their identity. Must run before authorization, which needs that identity.",
+    "UseAuthorization": "Decides *whether* the user is allowed to hit this endpoint. It needs both the endpoint (from routing) and the identity (from authentication), so it comes after both.",
+    "UseEndpoints": "Executes the matched endpoint — your controller action. It's the terminal step, so it goes last."
+  },
+  "levels": [
+    {
+      "id": "middleware-l1",
+      "zone": "middleware",
+      "tier": "free",
+      "primitive": "ordering",
+      "title": "L1 · The first four",
+      "prompt": "Drag these four into the order the request actually runs them. The packet walks top-to-bottom.",
+      "payload": {
+        "tiles": [
+          "UseAuthorization",
+          "UseEndpoints",
+          "UseExceptionHandler",
+          "UseRouting"
+        ]
+      },
+      "solution": {
+        "order": [
+          "UseExceptionHandler",
+          "UseRouting",
+          "UseAuthorization",
+          "UseEndpoints"
+        ]
+      },
+      "failStates": [
+        {
+          "rule": {
+            "type": "before",
+            "a": "UseAuthorization",
+            "b": "UseRouting"
+          },
+          "title": "Authorized before routing",
+          "explain": "Authorization ran before routing selected an endpoint — so there was no endpoint metadata yet, and nothing for it to authorize. UseRouting must come first."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "UseEndpoints",
+            "b": "UseAuthorization"
+          },
+          "title": "Endpoint ran unguarded",
+          "explain": "The endpoint executed before authorization could run, so a protected action fired for an unauthorized request. Authorization has to sit between routing and the endpoint."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "UseRouting",
+            "b": "UseExceptionHandler"
+          },
+          "title": "Exception handler isn't outermost",
+          "explain": "UseExceptionHandler needs to wrap everything downstream. Placed below routing, an exception thrown further along the pipeline escapes it and the client gets a raw 500."
+        }
+      ]
+    },
+    {
+      "id": "middleware-l2",
+      "zone": "middleware",
+      "tier": "free",
+      "primitive": "ordering",
+      "title": "L2 · Static files & identity",
+      "prompt": "A real pipeline adds HTTPS redirection, static files, and authentication. Order all seven.",
+      "payload": {
+        "tiles": [
+          "UseAuthorization",
+          "UseStaticFiles",
+          "UseAuthentication",
+          "UseExceptionHandler",
+          "UseEndpoints",
+          "UseHttpsRedirection",
+          "UseRouting"
+        ]
+      },
+      "solution": {
+        "order": [
+          "UseExceptionHandler",
+          "UseHttpsRedirection",
+          "UseStaticFiles",
+          "UseRouting",
+          "UseAuthentication",
+          "UseAuthorization",
+          "UseEndpoints"
+        ]
+      },
+      "failStates": [
+        {
+          "rule": {
+            "type": "before",
+            "a": "UseAuthorization",
+            "b": "UseAuthentication"
+          },
+          "title": "Authorized before authenticating",
+          "explain": "Authorization decided whether the user is allowed before authentication established who the user even is. Authenticate first (set the identity), then authorize against it."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "UseAuthorization",
+            "b": "UseStaticFiles"
+          },
+          "title": "Static file blocked by auth",
+          "explain": "Static files sit before auth so a public CSS/JS/image is served straight from disk. Behind authorization, every static asset would demand a login it never needed."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "UseAuthorization",
+            "b": "UseRouting"
+          },
+          "title": "Authorized before routing",
+          "explain": "No endpoint is selected until UseRouting runs, so authorization had no endpoint metadata to check. Routing must precede authorization."
+        }
+      ]
+    },
+    {
+      "id": "middleware-l3",
+      "zone": "middleware",
+      "tier": "free",
+      "primitive": "ordering",
+      "title": "L3 · The full pipeline",
+      "prompt": "The canonical production pipeline, including HSTS and CORS. Nine tiles — order them all.",
+      "payload": {
+        "tiles": [
+          "UseCors",
+          "UseAuthorization",
+          "UseStaticFiles",
+          "UseHsts",
+          "UseAuthentication",
+          "UseExceptionHandler",
+          "UseEndpoints",
+          "UseHttpsRedirection",
+          "UseRouting"
+        ]
+      },
+      "solution": {
+        "order": [
+          "UseExceptionHandler",
+          "UseHsts",
+          "UseHttpsRedirection",
+          "UseStaticFiles",
+          "UseRouting",
+          "UseCors",
+          "UseAuthentication",
+          "UseAuthorization",
+          "UseEndpoints"
+        ]
+      },
+      "failStates": [
+        {
+          "rule": {
+            "type": "before",
+            "a": "UseCors",
+            "b": "UseRouting"
+          },
+          "title": "CORS before routing",
+          "explain": "CORS runs after routing so it can read the endpoint's CORS policy/metadata. Placed before UseRouting, there's no selected endpoint and a preflight can't be matched to its policy."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "UseAuthorization",
+            "b": "UseAuthentication"
+          },
+          "title": "Authorized before authenticating",
+          "explain": "Authentication must establish the identity before authorization can judge it. Reversed, every request looks anonymous to the authorization check."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "UseAuthorization",
+            "b": "UseStaticFiles"
+          },
+          "title": "Static file blocked by auth",
+          "explain": "Static files belong before auth so public assets are served without a login challenge they never required."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "UseAuthorization",
+            "b": "UseRouting"
+          },
+          "title": "Authorized before routing",
+          "explain": "Routing selects the endpoint; only then does authorization have metadata to act on. Routing comes first."
+        }
+      ]
+    }
+  ]
+}

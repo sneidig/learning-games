@@ -1,0 +1,136 @@
+{
+  "id": "spotbug",
+  "title": "Spot the Vulnerability",
+  "blurb": "Real .NET code, one flaw each. Find the vulnerable line, then pick the fix a security reviewer would actually accept.",
+  "docs": [
+    { "label": "ASP.NET Core security topics (Microsoft Learn)", "url": "https://learn.microsoft.com/en-us/aspnet/core/security/" }
+  ],
+  "levels": [
+    {
+      "id": "spot-sqli",
+      "zone": "spotbug",
+      "tier": "free",
+      "primitive": "spotBug",
+      "title": "L1 · The user search",
+      "prompt": "Which line is the vulnerability, and what's the fix? (Injection · A05)",
+      "payload": {
+        "intro": "An ASP.NET Core controller action searching users by name.",
+        "nodes": [
+          { "id": "read", "label": "var name = Request.Query[\"name\"];", "sub": "reads untrusted input" },
+          { "id": "concat", "label": "var sql = \"SELECT * FROM Users WHERE Name = '\" + name + \"'\";", "sub": "builds the query" },
+          { "id": "exec", "label": "var users = db.Users.FromSqlRaw(sql).ToList();", "sub": "runs it" },
+          { "id": "ret", "label": "return Ok(users);", "sub": "returns the results" }
+        ],
+        "fixPrompt": "Pick the fix:",
+        "fixes": [
+          { "id": "param", "label": "Parameterize it: FromSqlInterpolated($\"...WHERE Name = {name}\")" },
+          { "id": "encode", "label": "HTML-encode name before using it" },
+          { "id": "trycatch", "label": "Wrap the query in a try/catch" }
+        ]
+      },
+      "solution": { "nodeId": "concat", "fixId": "param" },
+      "explain": "Concatenating untrusted input into SQL lets an attacker inject their own SQL. FromSqlInterpolated (or FromSqlRaw with real parameters) sends the value separately from the query text, so it can never be executed as code.",
+      "failStates": [
+        {
+          "when": { "nodeId": "exec" },
+          "title": "The execution isn't the bug",
+          "explain": "FromSqlRaw is fine when given a parameterized query. The vulnerability is the line that BUILDS the SQL by concatenating untrusted input."
+        },
+        {
+          "when": { "fixId": "encode" },
+          "title": "Encoding is for XSS, not SQL",
+          "explain": "HTML-encoding protects HTML output. For SQL, the fix is parameterization — keep the value out of the query text entirely."
+        },
+        {
+          "when": { "fixId": "trycatch" },
+          "title": "A try/catch hides errors, not the hole",
+          "explain": "Catching exceptions doesn't stop the injection — the malicious query still runs. Parameterize the query."
+        }
+      ]
+    },
+    {
+      "id": "spot-idor",
+      "zone": "spotbug",
+      "tier": "free",
+      "primitive": "spotBug",
+      "title": "L2 · The order lookup",
+      "prompt": "Every user is authenticated. Which line is the flaw, and the fix? (Broken Access Control · A01)",
+      "payload": {
+        "intro": "An endpoint that returns an order by id. [Authorize] is already on the controller.",
+        "nodes": [
+          { "id": "route", "label": "[HttpGet(\"orders/{id}\")]", "sub": "route" },
+          { "id": "sig", "label": "public IActionResult GetOrder(int id)", "sub": "signature" },
+          { "id": "find", "label": "var order = db.Orders.Find(id);", "sub": "loads the order" },
+          { "id": "ret", "label": "return Ok(order);", "sub": "returns it" }
+        ],
+        "fixPrompt": "Pick the fix:",
+        "fixes": [
+          { "id": "scope", "label": "Scope to the owner: load where order.UserId == currentUserId, else 404/403" },
+          { "id": "authorize", "label": "Add [Authorize] to the action" },
+          { "id": "guid", "label": "Use a Guid id so it can't be guessed" }
+        ]
+      },
+      "solution": { "nodeId": "find", "fixId": "scope" },
+      "explain": "Find(id) returns ANY order, so an authenticated user can read someone else's by changing the id (IDOR). The fix is an ownership check — load the order only if it belongs to the current user. This is authorization on the specific resource, not just being logged in.",
+      "failStates": [
+        {
+          "when": { "fixId": "authorize" },
+          "title": "[Authorize] isn't enough",
+          "explain": "The user is already authenticated — [Authorize] only confirms they're logged in. It does nothing to stop them reading another user's order. You must check that THIS order belongs to THIS user."
+        },
+        {
+          "when": { "fixId": "guid" },
+          "title": "Unguessable ids aren't access control",
+          "explain": "Swapping int for Guid is security through obscurity — ids leak in URLs, logs, and referrers. The real fix is an ownership check on every access."
+        },
+        {
+          "when": { "nodeId": "route" },
+          "title": "The route isn't the problem",
+          "explain": "Exposing an id in the route is normal. The flaw is that the lookup never verifies the caller owns that order."
+        }
+      ]
+    },
+    {
+      "id": "spot-crypto",
+      "zone": "spotbug",
+      "tier": "free",
+      "primitive": "spotBug",
+      "title": "L3 · Storing a password",
+      "prompt": "Which line is the flaw, and the fix? (Cryptographic Failures · A04)",
+      "payload": {
+        "intro": "How the app hashes a new user's password before saving it.",
+        "nodes": [
+          { "id": "md5", "label": "using var md5 = MD5.Create();", "sub": "chooses the algorithm" },
+          { "id": "hash", "label": "var bytes = md5.ComputeHash(Encoding.UTF8.GetBytes(password));", "sub": "hashes it" },
+          { "id": "store", "label": "user.PasswordHash = Convert.ToHexString(bytes);", "sub": "stores the hash" },
+          { "id": "save", "label": "db.SaveChanges();", "sub": "persists" }
+        ],
+        "fixPrompt": "Pick the fix:",
+        "fixes": [
+          { "id": "hasher", "label": "Use a slow, salted password hash — Identity's PasswordHasher (PBKDF2), or bcrypt/Argon2" },
+          { "id": "sha256", "label": "Use SHA-256 instead of MD5" },
+          { "id": "base64", "label": "Base64-encode the password instead" }
+        ]
+      },
+      "solution": { "nodeId": "md5", "fixId": "hasher" },
+      "explain": "MD5 is fast and unsalted — attackers brute-force billions of guesses per second and rainbow-table the rest. Passwords need a deliberately SLOW, salted hash: ASP.NET Core Identity's PasswordHasher (PBKDF2), or bcrypt/Argon2.",
+      "failStates": [
+        {
+          "when": { "fixId": "sha256" },
+          "title": "SHA-256 is still too fast",
+          "explain": "SHA-256 is stronger than MD5 for integrity, but it's still a FAST general-purpose hash — an attacker can try billions per second. Password storage needs a slow, salted algorithm (PBKDF2/bcrypt/Argon2), not just a 'stronger' fast hash."
+        },
+        {
+          "when": { "fixId": "base64" },
+          "title": "Base64 isn't hashing",
+          "explain": "Base64 is reversible encoding — anyone can decode it back to the password instantly. That's strictly worse."
+        },
+        {
+          "when": { "nodeId": "store" },
+          "title": "Storing the hash is fine",
+          "explain": "Persisting a hash is normal — the flaw is WHICH hash. MD5 is the wrong algorithm for passwords."
+        }
+      ]
+    }
+  ]
+}

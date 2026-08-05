@@ -1,0 +1,337 @@
+{
+  "id": "loops",
+  "title": "Read the Loop",
+  "blurb": "The bread and butter: look at a small piece of code and name its worst-case time complexity. Constants and lower-order terms don't matter — only how the work grows with n.",
+  "docs": [
+    {
+      "label": "Big-O Cheat Sheet",
+      "url": "https://www.bigocheatsheet.com/"
+    }
+  ],
+  "levels": [
+    {
+      "id": "loops-l1",
+      "zone": "loops",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L1 · Constant work",
+      "prompt": "What is the time complexity?",
+      "hint": "Is there a loop at all? How much work happens regardless of the array size?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Code",
+            "code": "int Third(int[] a)\n{\n    return a[2];\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "o1",
+            "label": "O(1)"
+          },
+          {
+            "id": "on",
+            "label": "O(n)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "o1"
+      },
+      "explain": "There’s no loop — indexing an array is one fixed operation no matter how big the array is. That’s O(1).",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "on"
+          },
+          "title": "No loop — just one access",
+          "explain": "Indexing an array is a single operation regardless of how big the array is. No matter the size, it does the same fixed work → O(1)."
+        }
+      ]
+    },
+    {
+      "id": "loops-l2",
+      "zone": "loops",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L2 · A single loop",
+      "prompt": "What is the time complexity?",
+      "hint": "How many times does the body run, relative to n?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Code",
+            "code": "for (int i = 0; i < n; i++)\n{\n    Console.WriteLine(i);\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "o1",
+            "label": "O(1)"
+          },
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "on2",
+            "label": "O(n²)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on"
+      },
+      "explain": "The body runs once per element, n times total, so the cost scales directly with n: O(n).",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "o1"
+          },
+          "title": "The work depends on n",
+          "explain": "The body runs once per element — n times total. Since the work grows with the input, it's O(n), not constant."
+        },
+        {
+          "when": {
+            "optionId": "on2"
+          },
+          "title": "Only one loop here",
+          "explain": "O(n²) needs a loop inside a loop. This is a single pass → O(n)."
+        }
+      ]
+    },
+    {
+      "id": "loops-l3",
+      "zone": "loops",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L3 · Steps of size k",
+      "prompt": "k is a constant. What is the time complexity?",
+      "hint": "Does a constant step size change the ORDER of growth, or just a constant factor?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Code",
+            "code": "for (int x = 0; x < n; x += k)\n{\n    Work(x);\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "ologn",
+            "label": "O(log n)"
+          },
+          {
+            "id": "o1",
+            "label": "O(1)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on"
+      },
+      "explain": "Stepping by a constant k runs the loop n/k times; drop the constant and it’s still O(n). Adding to the loop variable keeps it linear.",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "ologn"
+          },
+          "title": "Adding a constant is still linear",
+          "explain": "Stepping by k runs the loop n/k times. Dropping the constant 1/k, that's still O(n). You'd only get O(log n) if you multiplied or divided x each step, not added to it."
+        },
+        {
+          "when": {
+            "optionId": "o1"
+          },
+          "title": "It still scales with n",
+          "explain": "n/k iterations grows as n grows, so it's not constant — it's O(n)."
+        }
+      ]
+    },
+    {
+      "id": "loops-l4",
+      "zone": "loops",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L4 · Nested loops",
+      "prompt": "Both loops run over the same array. What is the time complexity?",
+      "hint": "Multiply the outer loop’s iterations by the inner loop’s.",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Code",
+            "code": "for (int i = 0; i < n; i++)\n    for (int j = 0; j < n; j++)\n        Compare(a[i], a[j]);"
+          }
+        ],
+        "options": [
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "on2",
+            "label": "O(n²)"
+          },
+          {
+            "id": "onlogn",
+            "label": "O(n log n)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on2"
+      },
+      "explain": "Two nested loops, each running n times: n × n = O(n²).",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "on"
+          },
+          "title": "Two nested loops multiply",
+          "explain": "For each of the n outer iterations, the inner loop runs n times: n × n = n² total → O(n²)."
+        },
+        {
+          "when": {
+            "optionId": "onlogn"
+          },
+          "title": "No halving here",
+          "explain": "n log n comes from divide-and-conquer (like sorting). Both of these loops are linear and nested, so it's O(n²)."
+        }
+      ]
+    },
+    {
+      "id": "loops-l5",
+      "zone": "loops",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L5 · The shrinking inner loop",
+      "prompt": "The inner loop starts at i, so it shrinks. What is the time complexity?",
+      "hint": "The inner loop shrinks — add up n + (n−1) + … + 1. What does that sum grow like?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Code",
+            "code": "for (int i = 0; i < n; i++)\n    for (int j = i; j < n; j++)\n        Compare(a[i], a[j]);"
+          }
+        ],
+        "options": [
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "on2",
+            "label": "O(n²)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on2"
+      },
+      "explain": "The inner loop shrinks, but n + (n−1) + … + 1 = n(n+1)/2 ≈ n²/2. Drop the ½ and it’s still O(n²) — half of quadratic is quadratic.",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "on"
+          },
+          "title": "A shrinking inner loop is still quadratic",
+          "explain": "The inner loop runs n, then n−1, then n−2 … totalling n(n+1)/2 ≈ n²/2. Drop the constant ½ → O(n²). Half of n² is still quadratic."
+        }
+      ]
+    },
+    {
+      "id": "loops-l6",
+      "zone": "loops",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L6 · Divide each step",
+      "prompt": "Look at how i changes. What is the time complexity?",
+      "hint": "Is i decremented or divided each step? That’s the difference between linear and logarithmic.",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Code",
+            "code": "for (int i = n; i > 0; i /= 2)\n{\n    Work(i);\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "ologn",
+            "label": "O(log n)"
+          },
+          {
+            "id": "o1",
+            "label": "O(1)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "ologn"
+      },
+      "explain": "i is halved each step (n → n/2 → … → 1), which happens only about log₂(n) times: O(log n). Dividing the loop variable by a constant is the signature of logarithmic time.",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "on"
+          },
+          "title": "It's halved, not decremented",
+          "explain": "i goes n → n/2 → n/4 → … → 1. That's only about log₂(n) steps, not n. Dividing (or multiplying) the loop variable by a constant is the signature of O(log n)."
+        },
+        {
+          "when": {
+            "optionId": "o1"
+          },
+          "title": "It still depends on n",
+          "explain": "It runs log n times — which grows (slowly) as n grows — so it isn't constant. It's O(log n)."
+        }
+      ]
+    },
+    {
+      "id": "loops-l7",
+      "zone": "loops",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L7 · Looks nested, but…",
+      "prompt": "The inner loop advances the OUTER index i. What is the time complexity?",
+      "hint": "Count how many times the innermost line runs in total — watch what happens to i inside the loop.",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Code",
+            "code": "for (int i = 0; i < n; i++)\n{\n    for (int j = i; j < n; j++)\n    {\n        i++;   // advances the outer index too\n    }\n}"
+          }
+        ],
+        "options": [
+          {
+            "id": "on",
+            "label": "O(n)"
+          },
+          {
+            "id": "on2",
+            "label": "O(n²)"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "on"
+      },
+      "explain": "It looks nested, but the inner loop advances the outer index i, so i goes 0→n only once across the whole run — the body executes ~n times total: O(n). Always count how many times the innermost line runs, not how many loops are stacked.",
+      "failStates": [
+        {
+          "when": {
+            "optionId": "on2"
+          },
+          "title": "The gotcha: count total iterations, not nesting",
+          "explain": "It LOOKS like O(n²), but the inner loop increments i — the outer index. Across the whole run, i advances from 0 to n exactly once, so the body runs about n times total → O(n). Always count how many times the innermost line actually runs, not how many loops are stacked."
+        }
+      ]
+    }
+  ]
+}

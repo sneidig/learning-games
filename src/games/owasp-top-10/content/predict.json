@@ -1,0 +1,142 @@
+{
+  "id": "predict",
+  "title": "Exploitable?",
+  "blurb": "Read the code and the attacker's input, then predict what actually happens. Knowing a rule is one thing — seeing the exploit land is another.",
+  "docs": [
+    { "label": "OWASP Top 10:2025", "url": "https://owasp.org/Top10/2025/" }
+  ],
+  "levels": [
+    {
+      "id": "pred-sqli",
+      "zone": "predict",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L1 · The injectable query",
+      "prompt": "What does this attacker input do?",
+      "payload": {
+        "blocks": [
+          { "label": "The query (name comes from the request)", "code": "var sql = $\"SELECT * FROM Users WHERE Name = '{name}'\";\ndb.Users.FromSqlRaw(sql).ToList();" },
+          { "label": "The attacker sends", "code": "name = \"' OR '1'='1\"" }
+        ],
+        "options": [
+          { "id": "one", "label": "Returns just the matching user" },
+          { "id": "all", "label": "Returns ALL users — SQL injection" },
+          { "id": "error", "label": "Throws a SQL syntax error" }
+        ]
+      },
+      "solution": { "optionId": "all" },
+      "explain": "The interpolation happens in C# BEFORE EF sees it, so FromSqlRaw runs: WHERE Name = '' OR '1'='1'. The injected OR makes the condition always true, dumping every user. FromSqlRaw + string interpolation is the classic trap.",
+      "failStates": [
+        {
+          "when": { "optionId": "one" },
+          "title": "The input breaks out of the string",
+          "explain": "The attacker's quote closes the literal, and OR '1'='1' is always true — so the WHERE matches every row, not one."
+        },
+        {
+          "when": { "optionId": "error" },
+          "title": "It's valid SQL — that's the problem",
+          "explain": "The injected fragment forms a perfectly valid WHERE clause. No error; it just returns everything."
+        }
+      ]
+    },
+    {
+      "id": "pred-safe",
+      "zone": "predict",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L2 · The parameterized version",
+      "prompt": "Same attack, but the query changed. What happens now?",
+      "payload": {
+        "blocks": [
+          { "label": "The query", "code": "db.Users.FromSqlInterpolated(\n    $\"SELECT * FROM Users WHERE Name = {name}\");" },
+          { "label": "The attacker sends", "code": "name = \"' OR '1'='1\"" }
+        ],
+        "options": [
+          { "id": "all", "label": "Returns ALL users — still injectable" },
+          { "id": "none", "label": "Returns no users — the input is treated as a literal name" },
+          { "id": "error", "label": "Throws a SQL syntax error" }
+        ]
+      },
+      "solution": { "optionId": "none" },
+      "explain": "FromSqlInterpolated turns the interpolated value into a SQL PARAMETER, not query text. The database looks for a user literally named ' OR '1'='1 — which doesn't exist — so it returns nothing. Same-looking code, opposite safety: this is the fix for L1.",
+      "failStates": [
+        {
+          "when": { "optionId": "all" },
+          "title": "FromSqlInterpolated parameterizes",
+          "explain": "Despite the $-string, FromSqlInterpolated (unlike FromSqlRaw) binds the value as a parameter, so it can't be executed as SQL. The attack fails."
+        },
+        {
+          "when": { "optionId": "error" },
+          "title": "No error — just a literal match",
+          "explain": "The whole string is treated as a single value to compare against Name. It's valid; it simply matches nothing."
+        }
+      ]
+    },
+    {
+      "id": "pred-idor",
+      "zone": "predict",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L3 · Whose order is it?",
+      "prompt": "User A (id 1) is logged in. Order 42 belongs to User B. What happens?",
+      "payload": {
+        "blocks": [
+          { "label": "The endpoint", "code": "[Authorize]\n[HttpGet(\"orders/{id}\")]\npublic IActionResult Get(int id)\n    => Ok(db.Orders.Find(id));" },
+          { "label": "User A requests", "code": "GET /orders/42" }
+        ],
+        "options": [
+          { "id": "forbid", "label": "403 Forbidden — [Authorize] blocks it" },
+          { "id": "leak", "label": "Returns User B's order — broken access control" },
+          { "id": "notfound", "label": "404 Not Found" }
+        ]
+      },
+      "solution": { "optionId": "leak" },
+      "explain": "[Authorize] only checks that A is logged in — not that order 42 is A's. Find(42) returns it regardless of owner, so A reads B's order. That's Insecure Direct Object Reference, a form of Broken Access Control (A01). The fix is to filter by owner.",
+      "failStates": [
+        {
+          "when": { "optionId": "forbid" },
+          "title": "[Authorize] ≠ ownership check",
+          "explain": "[Authorize] confirms authentication, not that the resource belongs to this user. It happily lets A fetch order 42."
+        },
+        {
+          "when": { "optionId": "notfound" },
+          "title": "The order exists — it's just not A's",
+          "explain": "Find(42) finds it and returns it. Nothing scopes the lookup to the current user, so there's no 404 and no block."
+        }
+      ]
+    },
+    {
+      "id": "pred-failopen",
+      "zone": "predict",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L4 · When the check throws",
+      "prompt": "The auth service throws (its database is down). What happens to the edit?",
+      "payload": {
+        "blocks": [
+          { "label": "The handler", "code": "try\n{\n    if (!await auth.CanEdit(user, doc))\n        return Forbid();\n}\ncatch { /* ignore */ }\n\ndoc.Update(changes);   // proceeds" },
+          { "label": "Scenario", "code": "auth.CanEdit(...) throws an exception" }
+        ],
+        "options": [
+          { "id": "blocked", "label": "The edit is blocked (fails closed)" },
+          { "id": "open", "label": "The edit proceeds — it fails OPEN" },
+          { "id": "500", "label": "The request crashes with a 500" }
+        ]
+      },
+      "solution": { "optionId": "open" },
+      "explain": "The empty catch swallows the exception, so control falls straight through to doc.Update — the permission check is silently skipped and the edit happens. That's 'failing open': Mishandling of Exceptional Conditions (A10, new in 2025). Security checks must fail CLOSED — deny on error.",
+      "failStates": [
+        {
+          "when": { "optionId": "blocked" },
+          "title": "Nothing blocks it",
+          "explain": "The Forbid() only runs if CanEdit returns false. When CanEdit THROWS, the catch eats the exception and execution continues to the update."
+        },
+        {
+          "when": { "optionId": "500" },
+          "title": "The catch prevents the 500",
+          "explain": "The empty catch swallows the exception, so there's no crash — worse, the code proceeds as if the check passed."
+        }
+      ]
+    }
+  ]
+}

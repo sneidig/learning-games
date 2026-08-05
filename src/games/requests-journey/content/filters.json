@@ -1,0 +1,75 @@
+{
+  "id": "filters",
+  "title": "The Filter Pipeline",
+  "blurb": "Inside MVC, filters wrap the action like an onion. They run in a fixed order — and people constantly confuse them with middleware. Order the five filter types.",
+  "docs": [
+    {
+      "label": "Microsoft Learn — Filters in ASP.NET Core",
+      "url": "https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/filters"
+    }
+  ],
+  "glossary": {
+    "Authorization": "Runs first. Decides if the request may proceed; can short-circuit everything else before any other filter runs.",
+    "Resource": "Runs after authorization, before and after model binding. Good for caching or short-circuiting expensive work early.",
+    "Action": "Wraps the action method itself — runs just before and just after your action executes.",
+    "Exception": "Catches unhandled exceptions from the action (and action filters). Must sit so it can wrap the action's execution.",
+    "Result": "Wraps execution of the ActionResult — runs just before and after the result (e.g. the JSON) is produced."
+  },
+  "levels": [
+    {
+      "id": "filters-l1",
+      "zone": "filters",
+      "tier": "free",
+      "primitive": "ordering",
+      "title": "L1 · The five filter types",
+      "prompt": "Order the filter types by when they first run as the request flows in. Hover each ⓘ if you're unsure.",
+      "payload": {
+        "tiles": [
+          "Result",
+          "Action",
+          "Authorization",
+          "Exception",
+          "Resource"
+        ]
+      },
+      "solution": {
+        "order": [
+          "Authorization",
+          "Resource",
+          "Action",
+          "Exception",
+          "Result"
+        ]
+      },
+      "failStates": [
+        {
+          "rule": {
+            "type": "before",
+            "a": "Resource",
+            "b": "Authorization"
+          },
+          "title": "Authorization goes first",
+          "explain": "Authorization runs before everything else so it can reject an unauthorized request immediately — before any resource, action, or result work happens."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "Action",
+            "b": "Resource"
+          },
+          "title": "Resource wraps model binding",
+          "explain": "Resource filters run around model binding, so they sit outside the action filters. Action filters are closer in — they wrap only the action method."
+        },
+        {
+          "rule": {
+            "type": "before",
+            "a": "Result",
+            "b": "Action"
+          },
+          "title": "The result comes last",
+          "explain": "Result filters wrap execution of the ActionResult, which happens after the action has returned. Result is the outermost-but-last step here."
+        }
+      ]
+    }
+  ]
+}

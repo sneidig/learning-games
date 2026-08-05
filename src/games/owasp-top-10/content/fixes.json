@@ -1,0 +1,76 @@
+{
+  "id": "fixes",
+  "title": "Match the .NET Fix",
+  "blurb": "Knowing the risk is half of it — knowing the ASP.NET Core / .NET remediation is what gets it fixed. Match each vulnerability to how you actually address it in a .NET app.",
+  "docs": [
+    { "label": "ASP.NET Core security topics (Microsoft Learn)", "url": "https://learn.microsoft.com/en-us/aspnet/core/security/" }
+  ],
+  "levels": [
+    {
+      "id": "fixes-l1",
+      "zone": "fixes",
+      "tier": "free",
+      "primitive": "matching",
+      "title": "L1 · The core fixes",
+      "prompt": "Match each vulnerability to its .NET fix.",
+      "payload": {
+        "leftTitle": "Vulnerability",
+        "rightTitle": "The .NET fix",
+        "left": [
+          { "id": "sqli", "label": "SQL injection" },
+          { "id": "idor", "label": "Broken access control (IDOR)" },
+          { "id": "pw", "label": "Weak password storage" },
+          { "id": "secret", "label": "Secrets in config / source" }
+        ],
+        "right": [
+          { "id": "param", "label": "Parameterized queries — EF Core LINQ, FromSqlInterpolated, or Dapper parameters" },
+          { "id": "resource", "label": "Resource-based authorization — scope every query to the current user" },
+          { "id": "hasher", "label": "Identity's PasswordHasher (PBKDF2), or bcrypt/Argon2 — slow and salted" },
+          { "id": "vault", "label": "User Secrets in dev; Azure Key Vault / managed identity in prod" }
+        ]
+      },
+      "solution": { "pairs": { "sqli": "param", "idor": "resource", "pw": "hasher", "secret": "vault" } },
+      "explain": "SQL injection → parameterize (keep values out of the query text). IDOR → resource-based authorization (check ownership). Weak passwords → a slow salted hash. Leaked secrets → User Secrets / Key Vault, never in source.",
+      "failStates": [
+        {
+          "when": { "leftId": "idor", "rightId": "hasher" },
+          "title": "Access control isn't a hashing problem",
+          "explain": "IDOR is fixed by verifying the caller owns the resource (resource-based authorization), not by anything crypto-related."
+        }
+      ]
+    },
+    {
+      "id": "fixes-l2",
+      "zone": "fixes",
+      "tier": "free",
+      "primitive": "matching",
+      "title": "L2 · The rest",
+      "prompt": "Match each vulnerability to its .NET fix.",
+      "payload": {
+        "leftTitle": "Vulnerability",
+        "rightTitle": "The .NET fix",
+        "left": [
+          { "id": "xss", "label": "Cross-site scripting (XSS)" },
+          { "id": "verbose", "label": "Verbose errors / dev page in prod" },
+          { "id": "deser", "label": "Unsafe deserialization" },
+          { "id": "noaudit", "label": "No visibility into attacks" }
+        ],
+        "right": [
+          { "id": "encode", "label": "Razor auto-encoding — avoid @Html.Raw; encode any HTML you must build" },
+          { "id": "env", "label": "Environment-based config — developer exception page only in Development; add security headers" },
+          { "id": "json", "label": "Avoid BinaryFormatter / TypeNameHandling.All; use System.Text.Json with known types" },
+          { "id": "log", "label": "Log security events (failed logins, denied access) and alert on them" }
+        ]
+      },
+      "solution": { "pairs": { "xss": "encode", "verbose": "env", "deser": "json", "noaudit": "log" } },
+      "explain": "XSS → let Razor encode output (avoid @Html.Raw). Verbose errors → only show the developer exception page in Development, add security headers. Unsafe deserialization → don't deserialize untrusted types; use System.Text.Json. No visibility → log and alert on security events.",
+      "failStates": [
+        {
+          "when": { "leftId": "deser", "rightId": "encode" },
+          "title": "Encoding doesn't fix deserialization",
+          "explain": "Output encoding stops XSS. Unsafe deserialization is fixed by not binding untrusted input to arbitrary types — use System.Text.Json with known, expected types."
+        }
+      ]
+    }
+  ]
+}

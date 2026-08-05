@@ -1,0 +1,89 @@
+{
+  "id": "classify",
+  "title": "Which Risk Is It?",
+  "blurb": "The core skill: look at a bit of .NET code or a scenario and name which OWASP 2025 category it falls under. Sort each into its bucket — the legend explains them.",
+  "docs": [
+    { "label": "OWASP Top 10:2025", "url": "https://owasp.org/Top10/2025/" }
+  ],
+  "levels": [
+    {
+      "id": "classify-l1",
+      "zone": "classify",
+      "tier": "free",
+      "primitive": "classify",
+      "title": "L1 · The big three",
+      "prompt": "Sort each into the OWASP 2025 risk it represents.",
+      "payload": {
+        "categories": [
+          { "id": "inj", "label": "Injection (A05)" },
+          { "id": "bac", "label": "Broken Access Control (A01)" },
+          { "id": "crypto", "label": "Cryptographic Failures (A04)" }
+        ],
+        "items": [
+          { "id": "sqlconcat", "label": "Building a SQL string by concatenating Request.Query[\"name\"]", "note": "\"...WHERE Name = '\" + name + \"'\"" },
+          { "id": "idor", "label": "GET /orders/{id} returns any order — no owner check", "note": "changing the id shows other users' data" },
+          { "id": "md5", "label": "Storing passwords hashed with MD5, no salt", "note": "fast, broken hash" },
+          { "id": "htmlraw", "label": "Rendering @Html.Raw(userComment) unencoded", "note": "reflected/stored XSS" },
+          { "id": "secret", "label": "A DB password committed in appsettings.json", "note": "secret in source control" },
+          { "id": "noauthz", "label": "Admin action with no [Authorize] and no role check", "note": "anyone can call it" }
+        ]
+      },
+      "solution": { "assignments": { "sqlconcat": "inj", "idor": "bac", "md5": "crypto", "htmlraw": "inj", "secret": "crypto", "noauthz": "bac" } },
+      "explain": "Input becoming code (SQL concat, @Html.Raw XSS) is Injection. Reaching data/actions you shouldn't (IDOR, missing [Authorize]) is Broken Access Control. Unprotected sensitive data (MD5 passwords, a committed secret) is Cryptographic Failures.",
+      "failStates": [
+        {
+          "when": { "itemId": "htmlraw", "categoryId": "bac" },
+          "title": "XSS is Injection",
+          "explain": "Cross-site scripting is untrusted input rendered as executable script — that's Injection (A05), the same family as SQL injection. It isn't about permissions."
+        },
+        {
+          "when": { "itemId": "idor", "categoryId": "inj" },
+          "title": "That's Broken Access Control",
+          "explain": "No malicious input is being executed — the query is fine. The problem is it returns records the caller shouldn't see. Missing an ownership check is Broken Access Control (A01)."
+        },
+        {
+          "when": { "itemId": "secret", "categoryId": "bac" },
+          "title": "A leaked secret is a crypto failure",
+          "explain": "Committing a password/connection string is failing to protect sensitive data — Cryptographic Failures (A04). Use User Secrets in dev and Key Vault / managed identity in prod."
+        }
+      ]
+    },
+    {
+      "id": "classify-l2",
+      "zone": "classify",
+      "tier": "free",
+      "primitive": "classify",
+      "title": "L2 · The subtler four",
+      "prompt": "Sort each scenario into its OWASP 2025 category.",
+      "payload": {
+        "categories": [
+          { "id": "supply", "label": "Supply Chain (A03)" },
+          { "id": "integrity", "label": "Integrity Failures (A08)" },
+          { "id": "logging", "label": "Logging & Alerting (A09)" },
+          { "id": "exceptions", "label": "Mishandling Exceptions (A10)" }
+        ],
+        "items": [
+          { "id": "binfmt", "label": "Deserializing user input with BinaryFormatter", "note": "attacker-controlled object graph" },
+          { "id": "oldpkg", "label": "A referenced NuGet package has a known CVE, years out of date", "note": "unpatched dependency" },
+          { "id": "nolog", "label": "Repeated failed logins produce no log entry or alert", "note": "brute force goes unseen" },
+          { "id": "swallow", "label": "catch (Exception) { } wrapping an authorization check", "note": "the failure is ignored, code continues" },
+          { "id": "typenamehandling", "label": "Json.NET with TypeNameHandling.All on untrusted input", "note": "deserializes arbitrary types" }
+        ]
+      },
+      "solution": { "assignments": { "binfmt": "integrity", "oldpkg": "supply", "nolog": "logging", "swallow": "exceptions", "typenamehandling": "integrity" } },
+      "explain": "Trusting tampered data/code (BinaryFormatter, TypeNameHandling.All) is Integrity Failures. An outdated/vulnerable dependency is Supply Chain. No record of security events is Logging & Alerting. Swallowing an exception so a check is skipped is Mishandling of Exceptional Conditions.",
+      "failStates": [
+        {
+          "when": { "itemId": "binfmt", "categoryId": "supply" },
+          "title": "Deserialization is an integrity failure",
+          "explain": "BinaryFormatter on untrusted input lets an attacker craft an object graph that runs code — Software/Data Integrity Failures (A08). Supply Chain (A03) is about the packages you depend on, not the data you deserialize."
+        },
+        {
+          "when": { "itemId": "swallow", "categoryId": "logging" },
+          "title": "Swallowing an exception is A10",
+          "explain": "An empty catch around an auth check means a failure is ignored and the code proceeds — Mishandling of Exceptional Conditions (A10, new in 2025). Logging & Alerting (A09) would be about not RECORDING the event, not about the control being skipped."
+        }
+      ]
+    }
+  ]
+}

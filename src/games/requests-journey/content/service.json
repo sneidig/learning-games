@@ -1,0 +1,83 @@
+{
+  "id": "service",
+  "title": "The Service Layer",
+  "blurb": "Business logic lives here, not in the controller. This is the hub for the judgment-flavored puzzles — deferred LINQ execution and async pitfalls that have one right answer once you know the rule.",
+  "levels": [
+    {
+      "id": "service-l1",
+      "zone": "service",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L1 · Deferred execution",
+      "prompt": "LINQ queries are lazy. What does r contain?",
+      "payload": {
+        "blocks": [
+          { "label": "Code", "code": "var list = new List<int> { 1, 2, 3 };\nvar q = list.Where(x => x > 2);\nlist.Add(4);\nvar r = q.ToList();" }
+        ],
+        "options": [
+          { "id": "3", "label": "[ 3 ]" },
+          { "id": "34", "label": "[ 3, 4 ]" },
+          { "id": "empty", "label": "[ ] (empty)" }
+        ]
+      },
+      "solution": { "optionId": "34" },
+      "failStates": [
+        {
+          "when": { "optionId": "3" },
+          "title": "The query runs at ToList(), not at Where()",
+          "explain": "Where() only describes the query. It actually executes at ToList() — which happens AFTER Add(4). So the source is {1,2,3,4} and both 3 and 4 pass the >2 filter."
+        },
+        {
+          "when": { "optionId": "empty" },
+          "title": "It's deferred, not broken",
+          "explain": "Deferred execution means q re-reads the (now updated) list when ToList() runs. The result is [3, 4], not empty."
+        }
+      ]
+    },
+    {
+      "id": "service-l2",
+      "zone": "service",
+      "tier": "free",
+      "primitive": "spotBug",
+      "title": "L2 · The blocking .Result deadlock",
+      "prompt": "This can deadlock in a request context. Find the offending line and pick the fix.",
+      "payload": {
+        "intro": "Blocking on an async call with .Result (or .Wait()) while a synchronization context is captured is the classic deadlock.",
+        "nodes": [
+          { "id": "call", "label": "var data = FetchAsync().Result;", "sub": "blocks the thread waiting on the task" },
+          { "id": "sig", "label": "public async Task<Data> FetchAsync()", "sub": "a normal async method" },
+          { "id": "use", "label": "return View(data);", "sub": "uses the result" }
+        ],
+        "fixPrompt": "Best fix?",
+        "fixes": [
+          { "id": "await", "label": "await FetchAsync() and make the calling method async all the way up" },
+          { "id": "run", "label": "Wrap it: Task.Run(() => FetchAsync()).Result" },
+          { "id": "configonly", "label": "Just add .ConfigureAwait(false) to .Result" }
+        ]
+      },
+      "solution": { "nodeId": "call", "fixId": "await" },
+      "failStates": [
+        {
+          "when": { "nodeId": "sig" },
+          "title": "The async method is fine",
+          "explain": "FetchAsync() is a normal async method. The bug is blocking on it with .Result, which can deadlock when the awaited continuation needs the thread you're blocking."
+        },
+        {
+          "when": { "nodeId": "use" },
+          "title": "Using the data is fine",
+          "explain": "Consuming the result isn't the problem — it's how the result was obtained: a blocking .Result instead of an await."
+        },
+        {
+          "when": { "fixId": "run" },
+          "title": "Task.Run hides it, wastes a thread",
+          "explain": "Offloading to a thread-pool thread dodges the captured context but burns a thread and treats the symptom. Async-all-the-way (await) is the real fix."
+        },
+        {
+          "when": { "fixId": "configonly" },
+          "title": "You're still blocking",
+          "explain": "ConfigureAwait(false) is about the continuation context, but .Result still synchronously blocks. The fix is to await instead of block."
+        }
+      ]
+    }
+  ]
+}

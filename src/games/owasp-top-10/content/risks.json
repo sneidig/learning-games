@@ -1,0 +1,90 @@
+{
+  "id": "risks",
+  "title": "Name the Risk",
+  "blurb": "The OWASP Top 10 (2025 edition) is the industry's list of the most critical web app risks. Match each category to what it actually means — the vocabulary you're expected to know.",
+  "docs": [
+    { "label": "OWASP Top 10:2025", "url": "https://owasp.org/Top10/2025/" }
+  ],
+  "levels": [
+    {
+      "id": "risks-l1",
+      "zone": "risks",
+      "tier": "free",
+      "primitive": "matching",
+      "title": "L1 · The ones you'll meet most",
+      "prompt": "Match each OWASP 2025 category to its meaning.",
+      "payload": {
+        "leftTitle": "OWASP 2025 category",
+        "rightTitle": "What it means",
+        "left": [
+          { "id": "bac", "label": "A01 · Broken Access Control" },
+          { "id": "inj", "label": "A05 · Injection" },
+          { "id": "crypto", "label": "A04 · Cryptographic Failures" },
+          { "id": "authn", "label": "A07 · Authentication Failures" },
+          { "id": "misconfig", "label": "A02 · Security Misconfiguration" }
+        ],
+        "right": [
+          { "id": "bac-d", "label": "Users act outside their permissions — reading or changing data that isn't theirs (e.g. changing an id in the URL)." },
+          { "id": "inj-d", "label": "Untrusted input is interpreted as code or a command — SQL injection, OS commands, and XSS all live here." },
+          { "id": "crypto-d", "label": "Sensitive data isn't protected — weak or missing hashing/encryption, secrets in code, no HTTPS." },
+          { "id": "authn-d", "label": "Weaknesses in proving who a user is — weak passwords, no MFA, broken sessions, credential stuffing." },
+          { "id": "misconfig-d", "label": "Insecure defaults or missing hardening — unnecessary features on, dev error pages in prod, no security headers." }
+        ]
+      },
+      "solution": { "pairs": { "bac": "bac-d", "inj": "inj-d", "crypto": "crypto-d", "authn": "authn-d", "misconfig": "misconfig-d" } },
+      "explain": "Broken Access Control = doing what you shouldn't; Injection = input treated as code; Cryptographic Failures = unprotected data; Authentication Failures = weak identity proof; Security Misconfiguration = insecure setup.",
+      "failStates": [
+        {
+          "when": { "leftId": "authn", "rightId": "bac-d" },
+          "title": "Authentication vs. Access Control",
+          "explain": "Authentication (A07) is proving WHO you are. Access Control (A01) is what you're allowed to DO once you're in. A logged-in user reading someone else's data is broken access control, not an auth failure."
+        },
+        {
+          "when": { "leftId": "crypto", "rightId": "inj-d" },
+          "title": "Crypto isn't injection",
+          "explain": "Cryptographic Failures is about unprotected sensitive data. Injection is untrusted input being executed. Different roots, different fixes."
+        }
+      ]
+    },
+    {
+      "id": "risks-l2",
+      "zone": "risks",
+      "tier": "free",
+      "primitive": "matching",
+      "title": "L2 · The rest of the ten",
+      "prompt": "Match the remaining OWASP 2025 categories to their meaning.",
+      "payload": {
+        "leftTitle": "OWASP 2025 category",
+        "rightTitle": "What it means",
+        "left": [
+          { "id": "supply", "label": "A03 · Software Supply Chain Failures" },
+          { "id": "design", "label": "A06 · Insecure Design" },
+          { "id": "integrity", "label": "A08 · Software/Data Integrity Failures" },
+          { "id": "logging", "label": "A09 · Security Logging & Alerting Failures" },
+          { "id": "exceptions", "label": "A10 · Mishandling of Exceptional Conditions" }
+        ],
+        "right": [
+          { "id": "supply-d", "label": "Risk from what you depend on — vulnerable/outdated packages, compromised build or CI/CD pipelines." },
+          { "id": "design-d", "label": "Flaws baked into the design itself — missing threat modeling, business-logic gaps clean code can't fix." },
+          { "id": "integrity-d", "label": "Trusting code or data that could be tampered with — unsafe deserialization, unsigned updates." },
+          { "id": "logging-d", "label": "Attacks go unnoticed — no logs for security events, no monitoring or alerting on suspicious activity." },
+          { "id": "exceptions-d", "label": "Errors handled insecurely — leaking stack traces, failing open, or swallowing exceptions so checks are skipped." }
+        ]
+      },
+      "solution": { "pairs": { "supply": "supply-d", "design": "design-d", "integrity": "integrity-d", "logging": "logging-d", "exceptions": "exceptions-d" } },
+      "explain": "Supply Chain = your dependencies; Insecure Design = the plan is flawed; Integrity Failures = trusting tampered code/data; Logging & Alerting = you never see the attack; Mishandling Exceptions = errors handled unsafely (new in 2025).",
+      "failStates": [
+        {
+          "when": { "leftId": "design", "rightId": "exceptions-d" },
+          "title": "Design flaw vs. error handling",
+          "explain": "Insecure Design (A06) is a missing or flawed control at the design level. Mishandling of Exceptional Conditions (A10) is specifically about how the code reacts when something throws or goes wrong."
+        },
+        {
+          "when": { "leftId": "integrity", "rightId": "supply-d" },
+          "title": "Integrity vs. supply chain",
+          "explain": "Supply Chain (A03) is about the components you pull in. Integrity Failures (A08) is about trusting data/code that could be modified — like deserializing attacker-controlled input."
+        }
+      ]
+    }
+  ]
+}

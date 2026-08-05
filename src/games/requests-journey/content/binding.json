@@ -1,0 +1,168 @@
+{
+  "id": "binding",
+  "title": "Model Binding",
+  "blurb": "Every action parameter gets its value from somewhere — the route, the query string, the body, a header. Under [ApiController] there are default conventions. Trace where each value binds.",
+  "docs": [
+    {
+      "label": "Microsoft Learn — Model Binding",
+      "url": "https://learn.microsoft.com/en-us/aspnet/core/mvc/models/model-binding"
+    }
+  ],
+  "levels": [
+    {
+      "id": "binding-l1",
+      "zone": "binding",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L1 · Default conventions",
+      "prompt": "No binding attributes are present. Under [ApiController], where does `id` come from?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Incoming request",
+            "code": "GET /items/5?q=abc"
+          },
+          {
+            "label": "Action",
+            "code": "[HttpGet(\"items/{id}\")]\npublic Item Get(int id, string? q)"
+          }
+        ],
+        "options": [
+          {
+            "id": "route",
+            "label": "From the route ({id})"
+          },
+          {
+            "id": "query",
+            "label": "From the query string"
+          },
+          {
+            "id": "body",
+            "label": "From the request body"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "route"
+      },
+      "failStates": [
+        {
+          "when": {
+            "optionId": "query"
+          },
+          "title": "`q` is the query one",
+          "explain": "Simple types bind from the route first when the template has a matching token. `id` matches the {id} route token; `q` (no token) is what binds from the query string."
+        },
+        {
+          "when": {
+            "optionId": "body"
+          },
+          "title": "Simple types don't bind from the body",
+          "explain": "Under [ApiController], only a complex type binds from the body. Simple types like int come from the route or query — here `id` matches the {id} route token."
+        }
+      ]
+    },
+    {
+      "id": "binding-l2",
+      "zone": "binding",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L2 · Complex types",
+      "prompt": "A complex parameter with no attribute, under [ApiController]. Where does `order` bind from?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Incoming request",
+            "code": "POST /orders\nContent-Type: application/json\n\n{ \"item\": \"book\", \"qty\": 2 }"
+          },
+          {
+            "label": "Action",
+            "code": "[ApiController]\npublic IActionResult Create(Order order)"
+          }
+        ],
+        "options": [
+          {
+            "id": "body",
+            "label": "From the request body (JSON)"
+          },
+          {
+            "id": "query",
+            "label": "From the query string"
+          },
+          {
+            "id": "empty",
+            "label": "It binds empty / fails"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "body"
+      },
+      "failStates": [
+        {
+          "when": {
+            "optionId": "query"
+          },
+          "title": "Complex types default to the body",
+          "explain": "Under [ApiController], a complex type with no attribute is inferred as [FromBody]. It deserializes from the JSON body, not the query string."
+        },
+        {
+          "when": {
+            "optionId": "empty"
+          },
+          "title": "It binds fine here",
+          "explain": "[ApiController] infers [FromBody] for complex types, so the JSON deserializes into order. (Without [ApiController] it would try form/query and come back empty — a classic gotcha.)"
+        }
+      ]
+    },
+    {
+      "id": "binding-l3",
+      "zone": "binding",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L3 · Two bodies",
+      "prompt": "What happens when an action asks for two [FromBody] parameters?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Action",
+            "code": "public IActionResult Save(\n    [FromBody] Order order,\n    [FromBody] Customer customer)"
+          }
+        ],
+        "options": [
+          {
+            "id": "both",
+            "label": "Both bind from the body"
+          },
+          {
+            "id": "first",
+            "label": "order binds, customer is empty"
+          },
+          {
+            "id": "error",
+            "label": "Runtime error — only one body allowed"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "error"
+      },
+      "failStates": [
+        {
+          "when": {
+            "optionId": "both"
+          },
+          "title": "A request has only one body",
+          "explain": "The body stream can be read once. Two [FromBody] parameters is an invalid configuration — ASP.NET Core throws at runtime rather than guessing."
+        },
+        {
+          "when": {
+            "optionId": "first"
+          },
+          "title": "It doesn't silently half-bind",
+          "explain": "It's not 'first wins' — two [FromBody] parameters is an error. Combine them into one model, or read the second value from another source."
+        }
+      ]
+    }
+  ]
+}

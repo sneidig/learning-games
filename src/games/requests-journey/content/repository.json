@@ -1,0 +1,196 @@
+{
+  "id": "repository",
+  "title": "Repository & DbContext",
+  "blurb": "The DbContext is a unit of work with a change tracker. Each entity moves through a little state machine — Added, Modified, Deleted, Unchanged, Detached — and a classic footgun (N+1) hides in innocent-looking loops.",
+  "docs": [
+    {
+      "label": "EF Core — Change tracking & entity states",
+      "url": "https://learn.microsoft.com/en-us/ef/core/change-tracking/"
+    },
+    {
+      "label": "EF Core — DbContext lifetime & configuration",
+      "url": "https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/"
+    }
+  ],
+  "levels": [
+    {
+      "id": "repo-l1",
+      "zone": "repository",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L1 · Entity state after a mutation",
+      "prompt": "An entity is loaded (tracked), then a property changes. Before SaveChanges, what's its EntityState?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Code",
+            "code": "var p = ctx.Products.Find(5);  // tracked\np.Name = \"New name\";\n// ... before SaveChanges()"
+          }
+        ],
+        "options": [
+          {
+            "id": "unchanged",
+            "label": "Unchanged"
+          },
+          {
+            "id": "modified",
+            "label": "Modified"
+          },
+          {
+            "id": "detached",
+            "label": "Detached"
+          },
+          {
+            "id": "added",
+            "label": "Added"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "modified"
+      },
+      "failStates": [
+        {
+          "when": {
+            "optionId": "unchanged"
+          },
+          "title": "The tracker noticed",
+          "explain": "Because the entity is tracked, mutating a property flips its state to Modified immediately — even before SaveChanges. SaveChanges is what writes it and resets it to Unchanged."
+        },
+        {
+          "when": {
+            "optionId": "added"
+          },
+          "title": "It already exists",
+          "explain": "Added is for a brand-new entity passed to Add(). This one was loaded from the database, so editing it makes it Modified."
+        }
+      ]
+    },
+    {
+      "id": "repo-l2",
+      "zone": "repository",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L2 · AsNoTracking",
+      "prompt": "A no-tracking query, then a mutation, then SaveChanges. What persists?",
+      "payload": {
+        "blocks": [
+          {
+            "label": "Code",
+            "code": "var p = ctx.Products.AsNoTracking().First();\np.Name = \"New name\";\nctx.SaveChanges();"
+          }
+        ],
+        "options": [
+          {
+            "id": "saved",
+            "label": "The name change is saved"
+          },
+          {
+            "id": "nothing",
+            "label": "Nothing is saved"
+          },
+          {
+            "id": "throws",
+            "label": "SaveChanges throws"
+          }
+        ]
+      },
+      "solution": {
+        "optionId": "nothing"
+      },
+      "failStates": [
+        {
+          "when": {
+            "optionId": "saved"
+          },
+          "title": "Nothing is tracking it",
+          "explain": "AsNoTracking returns a Detached entity — the change tracker isn't watching it. SaveChanges has no recorded change for it, so the edit is silently lost."
+        },
+        {
+          "when": {
+            "optionId": "throws"
+          },
+          "title": "No error — just a no-op",
+          "explain": "SaveChanges doesn't throw; it simply has nothing to persist for a Detached entity. That silence is exactly why this bug is sneaky."
+        }
+      ]
+    },
+    {
+      "id": "repo-l3",
+      "zone": "repository",
+      "tier": "free",
+      "primitive": "spotBug",
+      "title": "L3 · The N+1 query",
+      "prompt": "This loop quietly fires a flood of SQL. Find the line that causes it and pick the fix.",
+      "payload": {
+        "intro": "One query loaded the orders. Then something inside the loop secretly runs another query per row.",
+        "nodes": [
+          {
+            "id": "query",
+            "label": "var orders = ctx.Orders.ToList();",
+            "sub": "1 query — loads all orders"
+          },
+          {
+            "id": "loop",
+            "label": "foreach (var o in orders)",
+            "sub": "iterates in memory"
+          },
+          {
+            "id": "nav",
+            "label": "    total += o.Customer.Orders.Count;",
+            "sub": "touches a lazy navigation property"
+          }
+        ],
+        "fixPrompt": "Best fix?",
+        "fixes": [
+          {
+            "id": "include",
+            "label": "Eager-load up front: ctx.Orders.Include(o => o.Customer).ThenInclude(c => c.Orders)"
+          },
+          {
+            "id": "asno",
+            "label": "Add AsNoTracking() to the query"
+          },
+          {
+            "id": "tolist",
+            "label": "Call ToList() again inside the loop"
+          }
+        ]
+      },
+      "solution": {
+        "nodeId": "nav",
+        "fixId": "include"
+      },
+      "failStates": [
+        {
+          "when": {
+            "nodeId": "query"
+          },
+          "title": "The first query is fine",
+          "explain": "Loading the orders is a single, healthy query. The N+1 happens where a navigation property (o.Customer...) is touched lazily inside the loop — one extra query per order."
+        },
+        {
+          "when": {
+            "nodeId": "loop"
+          },
+          "title": "The loop itself is innocent",
+          "explain": "Iterating in memory costs nothing. It's the navigation-property access inside it that triggers a lazy query each pass."
+        },
+        {
+          "when": {
+            "fixId": "asno"
+          },
+          "title": "AsNoTracking doesn't stop the N queries",
+          "explain": "No-tracking helps memory and speed, but you still lazily load the Customer N times. You have to eager-load the navigation so it comes back in the first query."
+        },
+        {
+          "when": {
+            "fixId": "tolist"
+          },
+          "title": "That makes it worse",
+          "explain": "Another ToList() inside the loop adds even more round-trips. The fix is to Include the navigation so EF fetches it once, up front."
+        }
+      ]
+    }
+  ]
+}

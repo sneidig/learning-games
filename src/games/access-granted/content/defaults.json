@@ -1,0 +1,93 @@
+{
+  "id": "defaults",
+  "title": "The Implicit Default",
+  "blurb": "Leave the modifier off and C# picks one for you — and it's different depending on where you are. Sort each declaration by the accessibility it gets by default. The legend has the rules.",
+  "docs": [
+    { "label": "Microsoft Learn — Accessibility Levels (defaults table)", "url": "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/accessibility-levels" }
+  ],
+  "glossary": {
+    "private": "Default for MEMBERS of a class or struct (fields, methods, nested types). Forget a modifier inside a class and it's private.",
+    "internal": "Default for TOP-LEVEL types declared in a namespace (class, struct, interface, enum, delegate) — visible assembly-wide, but not outside it.",
+    "public": "Default for INTERFACE members and ENUM members: an interface exists to expose a contract, and enum values are always public (you can't even change it)."
+  },
+  "levels": [
+    {
+      "id": "defaults-l1",
+      "zone": "defaults",
+      "tier": "free",
+      "primitive": "classify",
+      "title": "L1 · Where does it default?",
+      "prompt": "No access modifier is written. What accessibility does each get?",
+      "payload": {
+        "categories": [
+          { "id": "private", "label": "private" },
+          { "id": "internal", "label": "internal" },
+          { "id": "public", "label": "public" }
+        ],
+        "items": [
+          { "id": "classfield", "label": "a field inside a class", "note": "class MyType { int x; }" },
+          { "id": "toplevelclass", "label": "a top-level class in a namespace", "note": "class MyType { }" },
+          { "id": "ifacemember", "label": "a method inside an interface", "note": "interface I { void Do(); }" },
+          { "id": "structfield", "label": "a field inside a struct", "note": "struct S { int x; }" }
+        ]
+      },
+      "solution": {
+        "assignments": { "classfield": "private", "toplevelclass": "internal", "ifacemember": "public", "structfield": "private" }
+      },
+      "failStates": [
+        {
+          "when": { "itemId": "toplevelclass", "categoryId": "public" },
+          "title": "Top-level types default to internal",
+          "explain": "A class declared in a namespace is internal unless you write public. Lots of people assume 'no modifier = public' — it's the opposite outside a type."
+        },
+        {
+          "when": { "itemId": "ifacemember", "categoryId": "private" },
+          "title": "Interface members are public",
+          "explain": "The whole point of an interface is to expose a contract, so its members are public by default (and pre-C# 8 couldn't be anything else)."
+        }
+      ]
+    },
+    {
+      "id": "defaults-l2",
+      "zone": "defaults",
+      "tier": "free",
+      "primitive": "classify",
+      "title": "L2 · The trickier defaults",
+      "prompt": "Same idea, sneakier cases.",
+      "payload": {
+        "categories": [
+          { "id": "private", "label": "private" },
+          { "id": "internal", "label": "internal" },
+          { "id": "public", "label": "public" }
+        ],
+        "items": [
+          { "id": "nested", "label": "a nested class inside a class", "note": "class Outer { class Inner { } }" },
+          { "id": "enummember", "label": "the members of an enum", "note": "enum Color { Red, Green }" },
+          { "id": "toplevelstruct", "label": "a top-level struct in a namespace", "note": "struct Point { }" },
+          { "id": "delegate", "label": "a delegate declared in a namespace", "note": "delegate void Handler();" },
+          { "id": "recordprop", "label": "a property inside a record class", "note": "record R { int X { get; } }" }
+        ]
+      },
+      "solution": {
+        "assignments": { "nested": "private", "enummember": "public", "toplevelstruct": "internal", "delegate": "internal", "recordprop": "private" }
+      },
+      "failStates": [
+        {
+          "when": { "itemId": "nested", "categoryId": "internal" },
+          "title": "A nested type is a member",
+          "explain": "Unlike a top-level type, a class nested inside another class is a member — so it defaults to private, just like a field."
+        },
+        {
+          "when": { "itemId": "enummember", "categoryId": "private" },
+          "title": "Enum members are always public",
+          "explain": "You can't apply any access modifier to enum members — they're public, full stop."
+        },
+        {
+          "when": { "itemId": "recordprop", "categoryId": "public" },
+          "title": "record doesn't change member defaults",
+          "explain": "The record modifier synthesizes extra members but doesn't change accessibility — a member inside a record class still defaults to private."
+        }
+      ]
+    }
+  ]
+}
