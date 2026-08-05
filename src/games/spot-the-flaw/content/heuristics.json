@@ -1,0 +1,48 @@
+{
+  "id": "heuristics",
+  "title": "Reviewer's Heuristics",
+  "blurb": "A handful of questions catch most flaws in a code review. Match each reviewer's rule-of-thumb to the class of bug it's designed to surface.",
+  "docs": [
+    { "label": "OWASP Top 10:2025", "url": "https://owasp.org/Top10/2025/" }
+  ],
+  "levels": [
+    {
+      "id": "heur-l1",
+      "zone": "heuristics",
+      "tier": "free",
+      "primitive": "matching",
+      "title": "L1 · Ask these while you read",
+      "prompt": "Match each review question to what it catches.",
+      "payload": {
+        "leftTitle": "The question to ask",
+        "rightTitle": "What it catches",
+        "left": [
+          { "id": "trace", "label": "Trace every piece of request input to where it's used" },
+          { "id": "own", "label": "Is there an ownership check, not just a login?" },
+          { "id": "server", "label": "Does validation happen on the server, not only in the browser?" },
+          { "id": "closed", "label": "On error, does the code deny by default?" }
+        ],
+        "right": [
+          { "id": "inject", "label": "injection — SQL, command, or XSS (untrusted input reaching a sink)" },
+          { "id": "idor", "label": "broken access control — e.g. IDOR, reading another user's record by changing an id" },
+          { "id": "client", "label": "client-trust bypass — the attacker skips the browser and posts raw values" },
+          { "id": "failopen", "label": "fail-open — an exception skips a security check and the code proceeds anyway" }
+        ]
+      },
+      "solution": { "pairs": { "trace": "inject", "own": "idor", "server": "client", "closed": "failopen" } },
+      "explain": "Tracing request input to its sink finds injection. Asking for an ownership check (not just a login) finds IDOR / broken access control. Insisting validation runs server-side finds client-trust bypasses. Checking that errors deny by default finds fail-open bugs.",
+      "failStates": [
+        {
+          "when": { "leftId": "own", "rightId": "inject" },
+          "title": "Ownership is about access, not injection",
+          "explain": "Injection is untrusted input becoming code — you catch it by tracing input to sinks. The ownership question catches broken access control (IDOR): a logged-in user reaching data that isn't theirs."
+        },
+        {
+          "when": { "leftId": "closed", "rightId": "client" },
+          "title": "That's the fail-open question",
+          "explain": "\"Deny by default on error\" catches fail-open bugs (a thrown exception skipping a check). Client-trust bypass is caught by requiring server-side validation."
+        }
+      ]
+    }
+  ]
+}

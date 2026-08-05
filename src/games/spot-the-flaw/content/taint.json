@@ -1,0 +1,91 @@
+{
+  "id": "taint",
+  "title": "Follow the Taint",
+  "blurb": "\"Taint\" is just a name for untrusted data. Following the taint means tracing attacker-controlled input from where it enters to where it's used — and checking it gets cleaned up before anything dangerous happens. Read each snippet and decide: does tainted data reach a sink unchecked?",
+  "docs": [
+    { "label": "SQL injection & parameters (EF Core, Microsoft Learn)", "url": "https://learn.microsoft.com/en-us/aspnet/core/security/" }
+  ],
+  "levels": [
+    {
+      "id": "taint-l1",
+      "zone": "taint",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L1 · Straight into a query",
+      "prompt": "The name comes from the request. Is this vulnerable?",
+      "hint": "Trace `name` from the request to the query. Is it stitched into the SQL text, or passed as a separate value?",
+      "payload": {
+        "blocks": [
+          { "label": "Code", "code": "var name = Request.Query[\"name\"];\ndb.Users.FromSqlInterpolated(\n    $\"SELECT * FROM Users WHERE Name = {name}\");" }
+        ],
+        "options": [
+          { "id": "safe", "label": "✅ Safe" },
+          { "id": "vuln", "label": "⚠️ Vulnerable — SQL injection" }
+        ]
+      },
+      "solution": { "optionId": "safe" },
+      "explain": "FromSqlInterpolated turns the interpolated value into a parameter — it's sent to the database separately from the query text, so it can never be run as SQL. The taint reaches the sink, but the sink is safe. (FromSqlRaw with the same string would NOT be — that's the trap.)",
+      "failStates": [
+        {
+          "when": { "optionId": "vuln" },
+          "title": "This one parameterizes",
+          "explain": "Despite the $-string, FromSqlInterpolated (unlike FromSqlRaw) binds the value as a parameter, so the injection can't happen. Safe."
+        }
+      ]
+    },
+    {
+      "id": "taint-l2",
+      "zone": "taint",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L2 · Concatenated in",
+      "prompt": "Same input, different query. Vulnerable?",
+      "hint": "Look at how the SQL string is built. Is the untrusted value part of the query TEXT?",
+      "payload": {
+        "blocks": [
+          { "label": "Code", "code": "var name = Request.Query[\"name\"];\nvar sql = \"SELECT * FROM Users WHERE Name = '\" + name + \"'\";\ndb.Database.ExecuteSqlRaw(sql);" }
+        ],
+        "options": [
+          { "id": "safe", "label": "✅ Safe" },
+          { "id": "vuln", "label": "⚠️ Vulnerable — SQL injection" }
+        ]
+      },
+      "solution": { "optionId": "vuln" },
+      "explain": "The untrusted name is concatenated into the query text, so an attacker's input becomes part of the SQL that runs — classic SQL injection. The fix is to parameterize (pass the value separately), not to build the string yourself.",
+      "failStates": [
+        {
+          "when": { "optionId": "safe" },
+          "title": "The value becomes SQL",
+          "explain": "Because name is glued into the query string, input like ' OR '1'='1 changes the query itself. Tainted data reached the sink (ExecuteSqlRaw) with no cleaning — vulnerable."
+        }
+      ]
+    },
+    {
+      "id": "taint-l3",
+      "zone": "taint",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L3 · Reading a file by name",
+      "prompt": "The file name comes from the request. Vulnerable?",
+      "hint": "What could an attacker put in `file`? Think about what \"../\" does to Path.Combine.",
+      "payload": {
+        "blocks": [
+          { "label": "Code", "code": "var file = Request.Query[\"file\"];\nvar path = Path.Combine(_root, file);\nreturn File(System.IO.File.ReadAllBytes(path), \"application/octet-stream\");" }
+        ],
+        "options": [
+          { "id": "safe", "label": "✅ Safe" },
+          { "id": "vuln", "label": "⚠️ Vulnerable — path traversal" }
+        ]
+      },
+      "solution": { "optionId": "vuln" },
+      "explain": "The untrusted file name flows straight into a file path. An attacker sends file=..\\..\\appsettings.json and Path.Combine happily walks up out of _root — this is path traversal (escaping the intended folder to read other files). Fix: resolve the full path and verify it still starts under _root, or map an allowlist of ids to files.",
+      "failStates": [
+        {
+          "when": { "optionId": "safe" },
+          "title": "Path.Combine doesn't stop \"../\"",
+          "explain": "Path.Combine(_root, \"../../secret.txt\") resolves OUTSIDE _root — it doesn't sandbox anything. Untrusted input reached a file-open sink unchecked, so an attacker can read arbitrary files. That's path traversal."
+        }
+      ]
+    }
+  ]
+}

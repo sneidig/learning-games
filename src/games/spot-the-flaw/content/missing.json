@@ -1,0 +1,109 @@
+{
+  "id": "missing",
+  "title": "The Missing Check",
+  "blurb": "The hardest flaws to see are the ones that aren't there — a control that SHOULD exist but doesn't. Read code that looks fine and name what's absent.",
+  "docs": [
+    { "label": "ASP.NET Core security topics (Microsoft Learn)", "url": "https://learn.microsoft.com/en-us/aspnet/core/security/" }
+  ],
+  "levels": [
+    {
+      "id": "miss-authz",
+      "zone": "missing",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L1 · The admin action",
+      "prompt": "Any signed-in user can reach this. What's the security problem?",
+      "hint": "[Authorize] answers \"are you logged in?\" — does anything here check WHO you are or WHAT you're allowed to do?",
+      "payload": {
+        "blocks": [
+          { "label": "Code", "code": "[Authorize]\n[HttpPost(\"admin/delete-all\")]\npublic IActionResult DeleteAllUsers()\n{\n    db.Users.ExecuteDelete();\n    return Ok();\n}" }
+        ],
+        "options": [
+          { "id": "authz", "label": "Missing an authorization check — any logged-in user can call it" },
+          { "id": "authn", "label": "Missing authentication" },
+          { "id": "fine", "label": "Nothing wrong" }
+        ]
+      },
+      "solution": { "optionId": "authz" },
+      "explain": "[Authorize] only confirms the caller is authenticated (logged in) — it does NOT limit WHICH users. A regular user could POST to admin/delete-all and wipe the table. It needs a role/policy check, e.g. [Authorize(Roles = \"Admin\")] or a policy. Authentication ≠ authorization.",
+      "failStates": [
+        {
+          "when": { "optionId": "authn" },
+          "title": "Authentication is present",
+          "explain": "[Authorize] already requires the user to be logged in. What's missing is authorization — restricting this destructive action to admins."
+        },
+        {
+          "when": { "optionId": "fine" },
+          "title": "It's wide open to any user",
+          "explain": "A destructive admin action reachable by every authenticated user is a serious broken-access-control flaw. It needs a role or policy check."
+        }
+      ]
+    },
+    {
+      "id": "miss-upload",
+      "zone": "missing",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L2 · The file upload",
+      "prompt": "It saves an uploaded file. What's missing?",
+      "hint": "Think about WHAT gets uploaded and WHERE it lands. Is the type or size checked? Is the folder served to the web?",
+      "payload": {
+        "blocks": [
+          { "label": "Code", "code": "var file = Request.Form.Files[0];\nvar path = Path.Combine(_webroot, file.FileName);\nusing var s = System.IO.File.Create(path);\nawait file.CopyToAsync(s);" }
+        ],
+        "options": [
+          { "id": "validate", "label": "No type/size check, and it saves into a web-served folder under the user's own filename" },
+          { "id": "encrypt", "label": "Missing encryption of the file" },
+          { "id": "fine", "label": "Nothing wrong" }
+        ]
+      },
+      "solution": { "optionId": "validate" },
+      "explain": "Three missing controls compound: the file type/size is never validated, the attacker chooses the filename (path traversal again), and it's written into _webroot — a folder the server hands back over HTTP. An attacker uploads shell.aspx and then requests it, running code on your server. Validate type/size, generate your own filename, and store outside the web root.",
+      "failStates": [
+        {
+          "when": { "optionId": "encrypt" },
+          "title": "Encryption isn't the gap",
+          "explain": "The problem isn't confidentiality of the file — it's that an unvalidated, attacker-named file lands in a web-executable folder."
+        },
+        {
+          "when": { "optionId": "fine" },
+          "title": "This is a classic RCE path",
+          "explain": "Unrestricted upload into the web root is a well-known route to remote code execution. The missing type/size validation and the attacker-controlled path/location are the flaw."
+        }
+      ]
+    },
+    {
+      "id": "miss-reset",
+      "zone": "missing",
+      "tier": "free",
+      "primitive": "predict",
+      "title": "L3 · The password reset",
+      "prompt": "This resets a password. What's missing?",
+      "hint": "What proves the person asking actually owns that email account?",
+      "payload": {
+        "blocks": [
+          { "label": "Code", "code": "[HttpPost(\"reset\")]\npublic async Task<IActionResult> Reset(string email, string newPassword)\n{\n    var user = await db.Users.FirstAsync(u => u.Email == email);\n    user.PasswordHash = _hasher.HashPassword(user, newPassword);\n    await db.SaveChangesAsync();\n    return Ok();\n}" }
+        ],
+        "options": [
+          { "id": "token", "label": "No proof of ownership — anyone can reset anyone's password by email, with no verification token" },
+          { "id": "hash", "label": "The password isn't hashed" },
+          { "id": "fine", "label": "Nothing wrong" }
+        ]
+      },
+      "solution": { "optionId": "token" },
+      "explain": "Nothing verifies that the caller actually controls that email address. An attacker just POSTs someone else's email + a new password and takes over the account. A reset must require a secret, single-use, expiring token that was emailed to the account owner (ASP.NET Core Identity generates one). The hashing here is fine — the missing ownership check is the hole.",
+      "failStates": [
+        {
+          "when": { "optionId": "hash" },
+          "title": "The password IS hashed",
+          "explain": "It uses _hasher.HashPassword (Identity's PBKDF2 hasher — a slow, salted password hash). Hashing isn't the problem; the missing verification token is."
+        },
+        {
+          "when": { "optionId": "fine" },
+          "title": "It's a full account-takeover",
+          "explain": "With no token proving ownership, anyone can reset any account's password just by knowing the email. That's account takeover."
+        }
+      ]
+    }
+  ]
+}

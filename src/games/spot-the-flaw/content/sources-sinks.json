@@ -1,0 +1,89 @@
+{
+  "id": "sources-sinks",
+  "title": "Sources & Sinks",
+  "blurb": "Secure review starts with two questions: where does attacker-controlled data get IN (a source), and where could bad data do HARM (a sink)? A flaw is untrusted data reaching a sink unchecked. Sort each line. The legend defines the terms.",
+  "docs": [
+    { "label": "ASP.NET Core security topics (Microsoft Learn)", "url": "https://learn.microsoft.com/en-us/aspnet/core/security/" }
+  ],
+  "glossary": {
+    "Untrusted source": "Where attacker-controlled data enters your code — the request query, form, body, headers or route, uploaded files, external API responses. Treat all of it as hostile until proven safe.",
+    "Dangerous sink": "An operation that can be abused if fed bad data — running SQL, starting a process, opening a file by path, writing to the HTML response, or deserializing (rebuilding an object from raw text). A flaw is untrusted data reaching one of these unchecked.",
+    "Safe / neither": "Code that neither takes in attacker data nor does anything dangerous with it — a constant, a log line, ordinary arithmetic."
+  },
+  "levels": [
+    {
+      "id": "ss-l1",
+      "zone": "sources-sinks",
+      "tier": "free",
+      "primitive": "classify",
+      "title": "L1 · In, out, or neither?",
+      "prompt": "Sort each line: does it bring attacker data IN (source), DO something dangerous (sink), or neither?",
+      "hint": "Ask two things per line: could an attacker control this value? and could a bad value here cause harm?",
+      "payload": {
+        "categories": [
+          { "id": "source", "label": "Untrusted source" },
+          { "id": "sink", "label": "Dangerous sink" },
+          { "id": "safe", "label": "Safe / neither" }
+        ],
+        "items": [
+          { "id": "query", "label": "var id = Request.Query[\"id\"];", "note": "reads the URL query string" },
+          { "id": "sqlraw", "label": "db.Database.ExecuteSqlRaw(sql);", "note": "runs a raw SQL string" },
+          { "id": "add", "label": "int total = a + b;", "note": "arithmetic on local values" },
+          { "id": "form", "label": "var email = Request.Form[\"email\"];", "note": "reads a posted form field" },
+          { "id": "proc", "label": "Process.Start(\"ping\", host);", "note": "launches an OS process" }
+        ]
+      },
+      "solution": { "assignments": { "query": "source", "sqlraw": "sink", "add": "safe", "form": "source", "proc": "sink" } },
+      "explain": "Request.Query and Request.Form bring in attacker-controlled data — sources. ExecuteSqlRaw and Process.Start act on data in dangerous ways — sinks. Adding two local ints touches no untrusted input and does nothing risky — safe.",
+      "failStates": [
+        {
+          "when": { "itemId": "proc", "categoryId": "safe" },
+          "title": "Starting a process is a sink",
+          "explain": "Launching an OS process is one of the most dangerous sinks there is — if any part of the command comes from user input, that's command injection (an attacker runs their own commands on your server)."
+        },
+        {
+          "when": { "itemId": "query", "categoryId": "safe" },
+          "title": "Request.Query is attacker-controlled",
+          "explain": "Anything from the request — query, form, headers, body — is a source: the attacker picks the value. It's safe only after you validate it."
+        }
+      ]
+    },
+    {
+      "id": "ss-l2",
+      "zone": "sources-sinks",
+      "tier": "free",
+      "primitive": "classify",
+      "title": "L2 · More lines to triage",
+      "prompt": "Same call: source, sink, or neither?",
+      "hint": "A sink doesn't have to touch a database — files, the HTTP response, and deserialization are sinks too.",
+      "payload": {
+        "categories": [
+          { "id": "source", "label": "Untrusted source" },
+          { "id": "sink", "label": "Dangerous sink" },
+          { "id": "safe", "label": "Safe / neither" }
+        ],
+        "items": [
+          { "id": "file", "label": "File.ReadAllText(path);", "note": "opens a file by path" },
+          { "id": "header", "label": "Request.Headers[\"X-Api-Key\"];", "note": "reads a request header" },
+          { "id": "log", "label": "logger.LogInformation(\"done\");", "note": "writes a fixed log line" },
+          { "id": "resp", "label": "await Response.WriteAsync(userText);", "note": "writes to the HTTP response body" },
+          { "id": "deser", "label": "JsonSerializer.Deserialize<Order>(body);", "note": "rebuilds an object from raw text" }
+        ]
+      },
+      "solution": { "assignments": { "file": "sink", "header": "source", "log": "safe", "resp": "sink", "deser": "sink" } },
+      "explain": "Request.Headers is a source (attacker-controlled). Opening a file by path (path could be tainted), writing user text into the response (XSS — the browser could run it as script), and deserializing untrusted text into an object are all sinks. A fixed log line is safe.",
+      "failStates": [
+        {
+          "when": { "itemId": "resp", "categoryId": "safe" },
+          "title": "Writing user text to the response is a sink",
+          "explain": "If you write attacker text straight into the HTML response, the browser may execute it as script — that's cross-site scripting (XSS). Output must be encoded; Razor does this for you, raw Response.WriteAsync does not."
+        },
+        {
+          "when": { "itemId": "header", "categoryId": "safe" },
+          "title": "Headers are attacker-controlled too",
+          "explain": "Request headers are just as attacker-controlled as the query string — a source. Don't trust them (including things like Host or X-Forwarded-For)."
+        }
+      ]
+    }
+  ]
+}

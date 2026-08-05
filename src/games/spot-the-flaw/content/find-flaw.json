@@ -1,0 +1,132 @@
+{
+  "id": "find-flaw",
+  "title": "Find the Flaw",
+  "blurb": "Real ASP.NET Core snippets, one security flaw each. Find the offending line, then pick the fix a security reviewer would sign off on. Each term is explained as it comes up.",
+  "docs": [
+    { "label": "ASP.NET Core security topics (Microsoft Learn)", "url": "https://learn.microsoft.com/en-us/aspnet/core/security/" }
+  ],
+  "levels": [
+    {
+      "id": "flaw-traversal",
+      "zone": "find-flaw",
+      "tier": "free",
+      "primitive": "spotBug",
+      "title": "L1 · The file download",
+      "prompt": "Which line is the flaw, and the fix? (path traversal — escaping the intended folder)",
+      "hint": "Follow the untrusted value to where it's used. What stops it from containing \"../\"?",
+      "payload": {
+        "intro": "An endpoint that returns a file from a downloads folder.",
+        "nodes": [
+          { "id": "read", "label": "var name = Request.Query[\"file\"];", "sub": "untrusted file name" },
+          { "id": "combine", "label": "var path = Path.Combine(_downloads, name);", "sub": "builds the path" },
+          { "id": "open", "label": "var bytes = System.IO.File.ReadAllBytes(path);", "sub": "reads the file" },
+          { "id": "ret", "label": "return File(bytes, \"application/octet-stream\");", "sub": "returns it" }
+        ],
+        "fixPrompt": "Pick the fix:",
+        "fixes": [
+          { "id": "canon", "label": "Resolve the full path and verify it still starts under _downloads (else reject)" },
+          { "id": "encode", "label": "URL-encode the file name before using it" },
+          { "id": "trycatch", "label": "Wrap the read in a try/catch" }
+        ]
+      },
+      "solution": { "nodeId": "combine", "fixId": "canon" },
+      "explain": "Path.Combine doesn't sandbox anything — name = \"..\\..\\appsettings.json\" resolves outside _downloads (path traversal). Resolve the absolute path (Path.GetFullPath) and confirm it still lives under _downloads before opening it; better yet, map an allowlist of ids to real files.",
+      "failStates": [
+        {
+          "when": { "nodeId": "open" },
+          "title": "Reading the file isn't the flaw",
+          "explain": "ReadAllBytes is fine once the path is trusted. The flaw is the line that builds an unchecked path from user input."
+        },
+        {
+          "when": { "fixId": "encode" },
+          "title": "Encoding is the wrong tool",
+          "explain": "URL-encoding is for URLs/HTML output, not file paths. The fix is to verify the resolved path stays inside the intended folder."
+        },
+        {
+          "when": { "fixId": "trycatch" },
+          "title": "A try/catch hides the symptom",
+          "explain": "Catching errors doesn't stop the traversal — the attacker's file is still read. You must constrain the path."
+        }
+      ]
+    },
+    {
+      "id": "flaw-command",
+      "zone": "find-flaw",
+      "tier": "free",
+      "primitive": "spotBug",
+      "title": "L2 · The diagnostics endpoint",
+      "prompt": "Find the flaw and the fix. (command injection — running attacker-chosen OS commands)",
+      "hint": "Untrusted input is being handed to the operating system. What could `host` contain besides a hostname?",
+      "payload": {
+        "intro": "A 'ping a host' admin utility.",
+        "nodes": [
+          { "id": "read", "label": "var host = Request.Query[\"host\"];", "sub": "untrusted host" },
+          { "id": "run", "label": "Process.Start(\"cmd.exe\", $\"/c ping {host}\");", "sub": "runs a shell command" },
+          { "id": "log", "label": "logger.LogInformation(\"Pinged {Host}\", host);", "sub": "logs it" }
+        ],
+        "fixPrompt": "Pick the fix:",
+        "fixes": [
+          { "id": "validate", "label": "Validate host against a strict allowlist / hostname pattern, and don't invoke a shell — pass args to the exe directly" },
+          { "id": "escape", "label": "Escape spaces in host before running it" },
+          { "id": "nothing", "label": "Nothing — ping is harmless" }
+        ]
+      },
+      "solution": { "nodeId": "run", "fixId": "validate" },
+      "explain": "Building a shell command from user input is command injection: host = \"x & del /q C:\\\\*\" runs the attacker's command too. Never pass untrusted input through a shell (cmd.exe /c). Validate it against a strict allowlist/pattern and invoke the program directly with separated arguments.",
+      "failStates": [
+        {
+          "when": { "nodeId": "log" },
+          "title": "The log line isn't the flaw",
+          "explain": "Logging the value is fine (a fixed message template). The flaw is feeding untrusted input to a shell."
+        },
+        {
+          "when": { "fixId": "escape" },
+          "title": "Escaping a shell is a losing game",
+          "explain": "Shell escaping is notoriously easy to get wrong. Don't invoke a shell with user input at all — allowlist the value and call the exe with explicit arguments."
+        },
+        {
+          "when": { "fixId": "nothing" },
+          "title": "It's not just ping",
+          "explain": "Through cmd.exe, the attacker can chain any command (& del …, | powershell …). This is a full remote-code-execution hole."
+        }
+      ]
+    },
+    {
+      "id": "flaw-redirect",
+      "zone": "find-flaw",
+      "tier": "free",
+      "primitive": "spotBug",
+      "title": "L3 · The login redirect",
+      "prompt": "Find the flaw and the fix. (open redirect — bouncing users to an attacker's site)",
+      "hint": "After login it redirects to a URL from the request. What if that URL points somewhere off your site?",
+      "payload": {
+        "intro": "After a successful login, send the user back where they came from.",
+        "nodes": [
+          { "id": "read", "label": "var returnUrl = Request.Query[\"returnUrl\"];", "sub": "untrusted URL" },
+          { "id": "signin", "label": "await SignInAsync(user);", "sub": "logs the user in" },
+          { "id": "redirect", "label": "return Redirect(returnUrl);", "sub": "sends them onward" }
+        ],
+        "fixPrompt": "Pick the fix:",
+        "fixes": [
+          { "id": "islocal", "label": "Only redirect to local URLs — check Url.IsLocalUrl(returnUrl), else send to a safe default" },
+          { "id": "encode", "label": "HTML-encode returnUrl" },
+          { "id": "nothing", "label": "Nothing — it's just a redirect" }
+        ]
+      },
+      "solution": { "nodeId": "redirect", "fixId": "islocal" },
+      "explain": "An open redirect lets an attacker craft a link on YOUR trusted domain (…/login?returnUrl=https://evil.example) that bounces the victim to a malicious site after login — great for phishing. Only redirect to URLs that stay on your own site: guard with Url.IsLocalUrl and fall back to a safe default.",
+      "failStates": [
+        {
+          "when": { "fixId": "encode" },
+          "title": "Encoding doesn't limit the destination",
+          "explain": "HTML-encoding is for output, not for deciding where a redirect goes. You need to reject non-local URLs."
+        },
+        {
+          "when": { "nodeId": "signin" },
+          "title": "Signing in isn't the flaw",
+          "explain": "The login itself is fine. The flaw is redirecting to an unchecked, attacker-supplied URL."
+        }
+      ]
+    }
+  ]
+}
