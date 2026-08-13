@@ -1,9 +1,29 @@
 // The landing page: one card per game, in that game's accent color, linking to
-// #/<game-id>. Replaces the old standalone static hub — same look, now driven by
-// the game registry so a new game appears automatically.
+// #/<game-id>. Registry games are driven by the catalog; a few standalone apps
+// (different interaction models, their own repos) are linked out separately.
 
 import type { CSSProperties } from 'react'
 import type { GameMeta } from '../games/types'
+
+interface ExternalApp {
+  title: string
+  emoji: string
+  accent: string
+  blurb: string
+  url: string
+}
+
+// Standalone apps that aren't puzzle-engine games (own repo, own deploy).
+const external: ExternalApp[] = [
+  {
+    title: 'Test First',
+    emoji: '✍️',
+    accent: '#22c55e',
+    blurb:
+      'Learn test-driven development by actually writing xUnit tests, with a coach that checks the shape of each one.',
+    url: 'https://sneidig.github.io/test-first/',
+  },
+]
 
 export function Hub({ games }: { games: GameMeta[] }) {
   return (
@@ -11,8 +31,8 @@ export function Hub({ games }: { games: GameMeta[] }) {
       <header className="hub__head">
         <h1>Learning Games</h1>
         <p className="hub__tagline">
-          Small browser games that drill the C# / .NET concepts worth knowing cold — each one built
-          on the same puzzle engine. Pick a topic and play.
+          Small browser games and hands-on drills for the C# / .NET concepts worth knowing cold.
+          Pick a topic and start.
         </p>
       </header>
 
@@ -33,9 +53,23 @@ export function Hub({ games }: { games: GameMeta[] }) {
             <span className="hubcard__play">Play →</span>
           </a>
         ))}
+
+        {external.map((e) => (
+          <a
+            key={e.url}
+            className="hubcard"
+            href={e.url}
+            style={{ ['--accent' as string]: e.accent } as CSSProperties}
+          >
+            <span className="hubcard__emoji">{e.emoji}</span>
+            <h2 className="hubcard__title">{e.title}</h2>
+            <p className="hubcard__desc">{e.blurb}</p>
+            <span className="hubcard__play">Open ↗</span>
+          </a>
+        ))}
       </div>
 
-      <footer className="hub__foot">One shared engine, many games.</footer>
+      <footer className="hub__foot">One shared engine, plus a few standalone drills.</footer>
     </div>
   )
 }
